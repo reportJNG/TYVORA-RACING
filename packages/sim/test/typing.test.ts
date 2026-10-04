@@ -233,4 +233,47 @@ describe('Typing Engine & Word Window System', () => {
     expect(session.getAccuracy()).toBe(100);
     expect(session.getFinalWpm()).toBeGreaterThan(0);
   });
+
+  it('automatically jumps space when word finishes cleanly without forcing space click', () => {
+    const state = createTypingState('drive fast win');
+
+    // Type "drive"
+    onChar(state, 'd', 100);
+    onChar(state, 'r', 150);
+    onChar(state, 'i', 200);
+    onChar(state, 'v', 250);
+    const lastEvent = onChar(state, 'e', 300);
+
+    // Auto-jump triggered!
+    expect(lastEvent.autoJumpedSpace).toBe(true);
+    expect(state.buffer.join('')).toBe('drive ');
+    expect(state.K).toBe(6); // cursor is already at index 6 ('f')
+    expect(state.C).toBe(6);
+
+    // Typist instinctively presses Spacebar right after - should absorb cleanly without mistake!
+    const redundantEvent = onChar(state, ' ', 320);
+    expect(redundantEvent.type).toBe('ignored_space_redundant');
+    expect(state.W).toBe(0);
+    expect(state.mistakes).toBe(0);
+    expect(state.streak).toBe(6);
+
+    // Type "fast"
+    onChar(state, 'f', 400);
+    onChar(state, 'a', 450);
+    onChar(state, 's', 500);
+    onChar(state, 't', 550);
+
+    expect(state.buffer.join('')).toBe('drive fast ');
+    expect(state.K).toBe(11); // cursor already at 'w'
+
+    // Type "win"
+    onChar(state, 'w', 600);
+    onChar(state, 'i', 650);
+    onChar(state, 'n', 700);
+
+    expect(state.K).toBe(14);
+    expect(state.W).toBe(0);
+    expect(state.completedAt).toBe(700);
+    expect(getTypingSnapshot(state, 700).isComplete).toBe(true);
+  });
 });

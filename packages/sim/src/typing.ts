@@ -10,10 +10,11 @@ export type KeystrokeEntry =
   | [t: number, 'WBS'];
 
 export interface TypingEvent {
-  type: 'correct' | 'mistake' | 'backspace' | 'ignored_full' | 'ignored_empty';
+  type: 'correct' | 'mistake' | 'backspace' | 'ignored_full' | 'ignored_empty' | 'ignored_space_redundant';
   index?: number;
   t: number;
   char?: string;
+  autoJumpedSpace?: boolean;
 }
 
 export interface TypingState {
@@ -35,6 +36,7 @@ export interface TypingState {
   correctKeyTimes: number[]; // timestamps of correct keystrokes for burst WPM
   log: KeystrokeEntry[];
   smoothedWpm: number;
+  autoAdvanceSpace: boolean; // space auto-jump on word completion
 }
 
 export interface TypingSnapshot {
@@ -56,6 +58,7 @@ export interface TypingSnapshot {
   progress: number;
   currentWordIndex: number;
   totalWords: number;
+  autoAdvanceSpace: boolean;
 }
 
 export interface WordCharacterState {
@@ -80,8 +83,8 @@ export interface WordWindowBlock {
 }
 
 export interface WordWindowOptions {
-  pastWords?: number;   // default 1-2
-  futureWords?: number; // default 4-6
+  pastWords?: number;   // default 1 (for smooth sliding drop animation)
+  futureWords?: number; // default 4 (total 5 active words ahead for high-speed eye lead)
 }
 
 export interface WordWindow {
@@ -94,7 +97,14 @@ export interface WordWindow {
   isFullWithErrors: boolean;
 }
 
-export function createTypingState(targetOrPassage: string | Passage): TypingState {
+export interface CreateTypingStateOptions {
+  autoAdvanceSpace?: boolean;
+}
+
+export function createTypingState(
+  targetOrPassage: string | Passage,
+  options?: CreateTypingStateOptions
+): TypingState {
   const isPassage = typeof targetOrPassage !== 'string' && 'words' in targetOrPassage;
   const target = isPassage ? targetOrPassage.text : (targetOrPassage as string);
   const passage = isPassage
@@ -120,6 +130,7 @@ export function createTypingState(targetOrPassage: string | Passage): TypingStat
     correctKeyTimes: [],
     log: [],
     smoothedWpm: 0,
+    autoAdvanceSpace: options?.autoAdvanceSpace ?? true,
   };
 }
 
@@ -127,10 +138,28 @@ export function createTypingState(targetOrPassage: string | Passage): TypingStat
  * Handles character input according to the Golden Rule:
  * Every character position evaluates independently.
  * Mistakes never cascade.
+ *
+ * Includes Space Auto-Jump:
+ * When a word is cleanly completed, the following space is jumped automatically
+ * so typists never have to think about clicking space. If a typist instinctively
+ * taps space right after, it is smoothly absorbed without error.
  */
 export function onChar(state: TypingState, ch: string, t: number): TypingEvent {
   if (state.K >= state.L) {
     return { type: 'ignored_full', t, char: ch };
+  }
+
+  // Redundant Space Absorption:
+  // If typist naturally taps space right after a word was completed and space auto-jumped,
+  // absorb it safely without recording a typo or resetting the streak.
+  if (
+    ch === ' ' &&
+    state.K > 0 &&
+    state.buffer[state.K - 1] === ' ' &&
+    state.K < state.L &&
+    state.target[state.K] !== ' '
+  ) {
+    return { type: 'ignored_space_redundant', index: state.K - 1, t, char: ' ' };
   }
 
   const expected = state.target[state.K];
@@ -153,12 +182,40 @@ export function onChar(state: TypingState, ch: string, t: number): TypingEvent {
     state.streak = 0;
   }
 
+  // SPACE AUTO-JUMP:
+  // If word completed cleanly with zero mistakes, jump over the space directly!
+  let autoJumped = false;
+  if (
+    ok &&
+    state.autoAdvanceSpace !== false &&
+    state.K < state.L &&
+    state.target[state.K] === ' ' &&
+    state.W === 0
+  ) {
+    state.buffer.push(' ');
+    state.K += 1;
+    state.totalKeystrokes += 1;
+    state.correctKeystrokes += 1;
+    state.C += 1;
+    state.streak += 1;
+    state.longestStreak = Math.max(state.longestStreak, state.streak);
+    state.correctKeyTimes.push(t);
+    state.log.push([Math.round(t), ' ']);
+    autoJumped = true;
+  }
+
   // Check completion criteria: must reach end of target with ZERO wrong characters
   if (state.K === state.L && state.W === 0 && state.completedAt === null) {
     state.completedAt = t;
   }
 
-  return { type: ok ? 'correct' : 'mistake', index: state.K - 1, t, char: ch };
+  return {
+    type: ok ? 'correct' : 'mistake',
+    index: autoJumped ? state.K - 2 : state.K - 1,
+    t,
+    char: ch,
+    autoJumpedSpace: autoJumped,
+  };
 }
 
 /**
@@ -295,7 +352,6 @@ export function getCurrentWordIndex(words: PassageWord[], K: number, L: number):
   if (K >= L) return Math.max(0, words.length - 1);
 
   for (let i = 0; i < words.length; i++) {
-    // If K is before or within word boundaries, or at the trailing space after this word
     const nextStart = i < words.length - 1 ? words[i + 1].startIndex : L;
     if (K < nextStart) {
       return i;
@@ -341,19 +397,21 @@ export function getTypingSnapshot(state: TypingState, tNow: number): TypingSnaps
     progress: state.L > 0 ? Number((state.K / state.L).toFixed(3)) : 0,
     currentWordIndex,
     totalWords: state.words.length,
+    autoAdvanceSpace: state.autoAdvanceSpace,
   };
 }
 
 /**
- * Generates the Word Window model for the kinetic rolling text interface.
- * Exposes approximately 1-2 past words, the current focused word, and 4-6 upcoming words.
+ * Generates the focused 5-Word Window model.
+ * Exposes 1 completed word on the left (dropping smoothly off) + 1 current active word + 3-4 upcoming words.
+ * Gives the typist a clean, uncluttered 5-word view for maximum speed.
  */
 export function getWordWindow(
   state: TypingState,
   options: WordWindowOptions = {}
 ): WordWindow {
-  const pastWords = options.pastWords ?? 1;
-  const futureWords = options.futureWords ?? 5; // Total ~6-7 visible words for eye-lead
+  const pastWords = options.pastWords ?? 1; // 1 completed word gracefully dropping away
+  const futureWords = options.futureWords ?? 4; // 4 upcoming words (total 5 active ahead)
 
   const words = state.words;
   const totalWords = words.length;
@@ -399,7 +457,7 @@ export function getWordWindow(
       });
     }
 
-    // Trailing space check (if not last word in passage)
+    // Trailing space check
     const hasTrailingSpace = wordDef.endIndex < state.L && state.target[wordDef.endIndex] === ' ';
     let trailingSpaceState: PositionState | undefined;
     let isTrailingSpaceCursor: boolean | undefined;
@@ -457,7 +515,7 @@ export class TypingSession {
   public state: TypingState;
   public passage: Passage;
 
-  constructor(targetOrPassage: string | Passage) {
+  constructor(targetOrPassage: string | Passage, options?: CreateTypingStateOptions) {
     if (typeof targetOrPassage === 'string') {
       this.passage = createPassage({
         id: `session_${Date.now()}`,
@@ -467,7 +525,7 @@ export class TypingSession {
     } else {
       this.passage = targetOrPassage;
     }
-    this.state = createTypingState(this.passage);
+    this.state = createTypingState(this.passage, options);
   }
 
   public handleCharacter(char: string, tMs: number): TypingEvent {
@@ -519,10 +577,15 @@ export class TypingSession {
   }
 
   public reset(): void {
-    this.state = createTypingState(this.passage);
+    this.state = createTypingState(this.passage, {
+      autoAdvanceSpace: this.state.autoAdvanceSpace,
+    });
   }
 }
 
-export function createTypingSession(targetOrPassage: string | Passage): TypingSession {
-  return new TypingSession(targetOrPassage);
+export function createTypingSession(
+  targetOrPassage: string | Passage,
+  options?: CreateTypingStateOptions
+): TypingSession {
+  return new TypingSession(targetOrPassage, options);
 }

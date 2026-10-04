@@ -45,13 +45,13 @@ export const SpeedStreaks: React.FC<SpeedStreaksProps> = ({
     if (!instancedRef.current || reducedMotion) return;
 
     const mesh = instancedRef.current;
-    if (speedKmh < 80) {
+    if (speedKmh < 150) {
       mesh.visible = false;
       return;
     }
     mesh.visible = true;
 
-    const speedNorm = Math.min(1.0, (speedKmh - 80) / 180);
+    const speedNorm = Math.min(1.0, (speedKmh - 150) / 600);
     const flowVelocity = (speedKmh * 1000) / 3600; // m/s
     const tangent = playerTangent.clone().normalize();
     const up = new THREE.Vector3(0, 1, 0);

@@ -1,6 +1,6 @@
 // apps/web/src/components/race/TypingHUD.tsx
 import React, { useEffect, useRef } from 'react';
-import { Zap, AlertTriangle } from 'lucide-react';
+import { Zap, AlertTriangle, FastForward } from 'lucide-react';
 import { useTypingStore } from '../../stores/useTypingStore.js';
 import { useRaceStore } from '../../stores/useRaceStore.js';
 import { TypingStream } from './TypingStream.js';
@@ -81,95 +81,101 @@ export const TypingHUD: React.FC<TypingHUDProps> = React.memo(({ isRacing }) => 
   const isHighStreak = streak >= 10;
   const boostPercent = Math.min(30, Math.round((streak / 50) * 30));
 
-  // Compute simulated transmission gear
+  // Compute simulated transmission gear scaled for 3X hyper-speed (up to 999 km/h)
   let gear = 1;
-  if (playerSpeedKmh >= 240) gear = 6;
-  else if (playerSpeedKmh >= 180) gear = 5;
-  else if (playerSpeedKmh >= 130) gear = 4;
-  else if (playerSpeedKmh >= 80) gear = 3;
-  else if (playerSpeedKmh >= 40) gear = 2;
+  if (playerSpeedKmh >= 840) gear = 6;
+  else if (playerSpeedKmh >= 680) gear = 5;
+  else if (playerSpeedKmh >= 480) gear = 4;
+  else if (playerSpeedKmh >= 300) gear = 3;
+  else if (playerSpeedKmh >= 150) gear = 2;
 
   return (
     <div
-      className={`w-full max-w-4xl mx-auto rounded-[8px] p-4 md:p-5 select-none transition-all duration-150 backdrop-blur-md ${
+      className={`w-full max-w-2xl mx-auto rounded-[10px] p-3 md:p-3.5 select-none transition-all duration-150 backdrop-blur-xl ${
         hasMistakes
           ? 'bg-surface/90 border border-danger/60 shadow-[0_0_24px_rgba(239,68,68,0.25)]'
           : isHighStreak
           ? 'bg-surface/90 border border-accent/60 shadow-[0_0_28px_rgba(255,85,28,0.3)]'
-          : 'bg-surface/85 border border-border shadow-[0_16px_40px_rgba(0,0,0,0.65)]'
+          : 'bg-surface/90 border border-border/80 shadow-[0_12px_32px_rgba(0,0,0,0.7)]'
       }`}
     >
-      {/* TOP INSTRUMENT STATUS BAR */}
-      <div className="flex items-center justify-between text-[11px] font-display uppercase tracking-widest text-text-muted pb-2 mb-2 border-b border-border/60">
-        <div className="flex items-center gap-3">
+      {/* TOP COMPACT STATUS BAR */}
+      <div className="flex items-center justify-between text-[10px] font-display uppercase tracking-widest text-text-muted pb-1.5 mb-1.5 border-b border-border/50">
+        <div className="flex items-center gap-2.5">
           <span className="text-accent font-bold">
-            STAGE {currentRound} / {totalRounds}
+            STAGE {currentRound}/{totalRounds}
           </span>
+
           {streak >= 5 && (
-            <span className="flex items-center gap-1 text-accent font-bold bg-accent/15 px-2 py-0.5 rounded border border-accent/30 animate-pulse">
-              <Zap className="w-3 h-3 fill-accent" />
+            <span className="flex items-center gap-1 text-accent font-bold bg-accent/15 px-1.5 py-0.5 rounded border border-accent/30 animate-pulse">
+              <Zap className="w-2.5 h-2.5 fill-accent" />
               <span>STREAK ×{streak}</span>
               {boostPercent > 0 && <span className="opacity-90">(+{boostPercent}%)</span>}
             </span>
           )}
+
+          <span className="hidden sm:flex items-center gap-1 text-text-muted/70 text-[9px] bg-surface-2/60 px-1.5 py-0.5 rounded border border-border/40">
+            <FastForward className="w-2.5 h-2.5 text-accent" />
+            <span>AUTO-SPACE</span>
+          </span>
         </div>
 
         <div className="flex items-center gap-2">
           {mistakes > 0 && (
             <span className="text-danger flex items-center gap-1 font-semibold">
-              <AlertTriangle className="w-3.5 h-3.5" />
+              <AlertTriangle className="w-3 h-3" />
               <span>
-                {mistakes} {mistakes === 1 ? 'ERROR' : 'ERRORS'}
+                {mistakes} {mistakes === 1 ? 'ERR' : 'ERRS'}
               </span>
             </span>
           )}
         </div>
       </div>
 
-      {/* KINETIC ROLLING WORD WINDOW STREAM */}
+      {/* 5-WORD KINETIC STREAM */}
       <TypingStream />
 
-      {/* ERROR CORRECTION HINT */}
+      {/* ERROR CORRECTION PROMPT */}
       {isFullWithErrors && (
-        <div className="mt-2.5 pt-2 border-t border-danger/30 flex items-center justify-between text-danger text-xs font-display uppercase tracking-widest font-bold">
+        <div className="mt-2 pt-1.5 border-t border-danger/30 flex items-center justify-between text-danger text-[11px] font-display uppercase tracking-widest font-bold">
           <span className="flex items-center gap-1.5 animate-pulse">
-            <span className="w-2 h-2 rounded-full bg-danger" />
-            <span>FIX ERRORS TO CROSS FINISH LINE</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-danger" />
+            <span>FIX ERRORS TO CROSS FINISH</span>
           </span>
-          <span className="bg-danger/20 px-2 py-0.5 rounded border border-danger/40 text-[11px] font-mono tracking-normal">
-            PRESS BACKSPACE
+          <span className="bg-danger/20 px-1.5 py-0.5 rounded border border-danger/40 text-[10px] font-mono tracking-normal">
+            BACKSPACE
           </span>
         </div>
       )}
 
-      {/* INTEGRATED BOTTOM TELEMETRY STRIP */}
-      <div className="mt-3 pt-2.5 border-t border-border/60 flex items-center justify-between text-xs font-display uppercase tracking-wider">
+      {/* COMPACT BOTTOM TELEMETRY STRIP */}
+      <div className="mt-2 pt-2 border-t border-border/50 flex items-center justify-between text-xs font-display uppercase tracking-wider">
         {/* Speedometer & Gear */}
-        <div className="flex items-baseline gap-2">
+        <div className="flex items-baseline gap-1.5">
           <span
-            className={`font-bold text-2xl md:text-3xl tabular-nums leading-none tracking-tight ${
-              playerSpeedKmh >= 180
-                ? 'text-accent drop-shadow-[0_0_12px_rgba(255,85,28,0.6)]'
+            className={`font-bold text-xl md:text-2xl tabular-nums leading-none tracking-tight ${
+              playerSpeedKmh >= 600
+                ? 'text-accent drop-shadow-[0_0_10px_rgba(255,85,28,0.7)]'
                 : 'text-text'
             }`}
           >
             {playerSpeedKmh}
           </span>
-          <span className="text-[11px] text-text-muted font-bold">KM/H</span>
-          <span className="text-[10px] text-text-faint ml-1">GEAR {gear}</span>
+          <span className="text-[10px] text-text-muted font-bold">KM/H</span>
+          <span className="text-[9px] text-text-faint ml-1">G{gear}</span>
         </div>
 
         {/* Telemetry WPM & Accuracy */}
-        <div className="flex items-center gap-4 text-xs font-display uppercase tracking-widest">
+        <div className="flex items-center gap-3 text-xs font-display uppercase tracking-widest">
           <div className="flex items-baseline gap-1">
-            <span className="text-[10px] text-text-muted">SPEED:</span>
-            <span className="text-base md:text-lg font-bold text-text tabular-nums">{liveWpm}</span>
-            <span className="text-[10px] text-text-faint">WPM</span>
+            <span className="text-[9px] text-text-muted">PACE:</span>
+            <span className="text-sm md:text-base font-bold text-text tabular-nums">{liveWpm}</span>
+            <span className="text-[9px] text-text-faint">WPM</span>
           </div>
 
           <div className="flex items-baseline gap-1">
-            <span className="text-[10px] text-text-muted">ACC:</span>
-            <span className="text-base md:text-lg font-bold text-text tabular-nums">
+            <span className="text-[9px] text-text-muted">ACC:</span>
+            <span className="text-sm md:text-base font-bold text-text tabular-nums">
               {accuracy}%
             </span>
           </div>

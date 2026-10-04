@@ -30,17 +30,17 @@ export const ChaseCamera: React.FC<ChaseCameraProps> = ({
 
   useFrame((_, delta) => {
     const persCam = camera as THREE.PerspectiveCamera;
-    const speed01 = Math.min(1.0, Math.max(0.0, speedKmh / 300));
+    const speed01 = Math.min(1.0, Math.max(0.0, speedKmh / 900));
 
     // Dynamic FOV
     if (!reducedMotion) {
-      const targetFov = 52 + 12 * speed01;
+      const targetFov = 52 + 14 * speed01;
       persCam.fov += (targetFov - persCam.fov) * Math.min(1, delta * 3.0);
       persCam.updateProjectionMatrix();
     }
 
     // Camera base offsets
-    const pullBack = (!reducedMotion ? 0.8 * speed01 : 0) - (isStalled ? 0.35 : 0);
+    const pullBack = (!reducedMotion ? 1.0 * speed01 : 0) - (isStalled ? 0.35 : 0);
     const height = 2.2 - (speed01 * 0.3);
 
     // Compute rear offset aligned with track tangent without allocations
@@ -51,7 +51,7 @@ export const ChaseCamera: React.FC<ChaseCameraProps> = ({
       .addScaledVector(_up, height);
 
     // High speed road vibration
-    if (screenShake && !reducedMotion && speedKmh > 200) {
+    if (screenShake && !reducedMotion && speedKmh > 500) {
       const vib = (Math.random() - 0.5) * 0.02 * speed01;
       _desiredPos.x += vib;
       _desiredPos.y += vib;

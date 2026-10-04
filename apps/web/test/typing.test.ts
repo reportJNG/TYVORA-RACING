@@ -33,19 +33,16 @@ describe('Web Typing Store & Word Window Integration', () => {
       t += 60;
     }
 
-    // Word 0 is still current until space is typed
-    expect(useTypingStore.getState().wordWindow.currentWordIndex).toBe(0);
+    // Word 0 completes and space automatically jumps directly to Word 1!
+    expect(useTypingStore.getState().wordWindow.currentWordIndex).toBe(1);
+    expect(useTypingStore.getState().wordWindow.blocks[0].status).toBe('completed');
+    expect(useTypingStore.getState().wordWindow.blocks[0].isFullyCorrect).toBe(true);
+    expect(useTypingStore.getState().wordWindow.blocks[1].status).toBe('current');
 
-    // Type trailing space
+    // If typist also taps spacebar out of habit, absorb cleanly without error
     useTypingStore.getState().typeChar(' ', t);
-    t += 60;
-
-    // Now current word advances to 1
-    const { wordWindow } = useTypingStore.getState();
-    expect(wordWindow.currentWordIndex).toBe(1);
-    expect(wordWindow.blocks[0].status).toBe('completed');
-    expect(wordWindow.blocks[0].isFullyCorrect).toBe(true);
-    expect(wordWindow.blocks[1].status).toBe('current');
+    expect(useTypingStore.getState().snapshot.wrongCount).toBe(0);
+    expect(useTypingStore.getState().wordWindow.currentWordIndex).toBe(1);
   });
 
   it('handles backspace typo correction in real time', () => {
