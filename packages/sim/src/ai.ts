@@ -17,20 +17,20 @@ export const AI_DIFFICULTY_PROFILES: Record<
   { rival: AiProfile; pacer: AiProfile }
 > = {
   easy: {
-    rival: { name: 'Racer Swift', targetWpm: 45, variance: 4, errorRatePermille: 40 },
-    pacer: { name: 'Cruiser Sam', targetWpm: 36, variance: 4, errorRatePermille: 45 },
+    rival: { name: 'Racer Swift', targetWpm: 32, variance: 3, errorRatePermille: 45 },
+    pacer: { name: 'Cruiser Sam', targetWpm: 26, variance: 3, errorRatePermille: 50 },
   },
   normal: {
-    rival: { name: 'Nitro Nova', targetWpm: 70, variance: 5, errorRatePermille: 30 },
-    pacer: { name: 'GearHead', targetWpm: 60, variance: 5, errorRatePermille: 35 },
+    rival: { name: 'Nitro Nova', targetWpm: 48, variance: 4, errorRatePermille: 35 },
+    pacer: { name: 'GearHead', targetWpm: 40, variance: 4, errorRatePermille: 40 },
   },
   hard: {
-    rival: { name: 'SpeedDemon', targetWpm: 95, variance: 6, errorRatePermille: 20 },
-    pacer: { name: 'Apex Ace', targetWpm: 82, variance: 6, errorRatePermille: 25 },
+    rival: { name: 'SpeedDemon', targetWpm: 68, variance: 5, errorRatePermille: 25 },
+    pacer: { name: 'Apex Ace', targetWpm: 58, variance: 5, errorRatePermille: 30 },
   },
   extreme: {
-    rival: { name: 'Ghost Zero', targetWpm: 118, variance: 7, errorRatePermille: 15 },
-    pacer: { name: 'Mach Mira', targetWpm: 102, variance: 7, errorRatePermille: 18 },
+    rival: { name: 'Ghost Zero', targetWpm: 92, variance: 6, errorRatePermille: 15 },
+    pacer: { name: 'Mach Mira', targetWpm: 80, variance: 6, errorRatePermille: 20 },
   },
 };
 

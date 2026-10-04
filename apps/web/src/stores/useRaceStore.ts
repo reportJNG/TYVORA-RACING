@@ -5,7 +5,6 @@ import {
   CarSpec,
   CAR_SPECS,
   M,
-  DT,
   RacerSim,
   createRacerSim,
   stepCar,
@@ -256,17 +255,26 @@ export const useRaceStore = create<RaceStoreState>((set, get) => ({
     const { status, raceTimeMs, raceDistance, playerSim, selectedCarId, opponents } = get();
     if (status !== 'racing') return;
 
+    const dt = deltaMs / 1000;
     const nextTimeMs = raceTimeMs + deltaMs;
     const typingState = useTypingStore.getState().typingState;
     const playerCar = CAR_SPECS[selectedCarId];
 
-    // Step player car physics (Never-Stop rule guarantees v >= MIN_RACE_SPEED)
-    stepCar(playerSim, typingState, playerCar, nextTimeMs, DT, raceDistance);
+    // Compute lead opponent distance for slipstream draft mechanic
+    let leadOpponentDistance = 0;
+    for (const opp of opponents) {
+      if (opp.racer.finishMs === null && opp.racer.d > leadOpponentDistance) {
+        leadOpponentDistance = opp.racer.d;
+      }
+    }
+
+    // Step player car physics with dt and slipstream draft awareness
+    stepCar(playerSim, typingState, playerCar, nextTimeMs, dt, raceDistance, leadOpponentDistance);
 
     // Update audio engine pitch with current player speed
     audioEngine.updateEngineRpm(playerSim.v * 3.6, playerSim.v > 5);
 
-    // Step AI opponents
+    // Step AI opponents with rubber-band awareness of player position
     for (const opp of opponents) {
       if (opp.racer.finishMs === null) {
         // Apply AI keystrokes up to nextTimeMs
@@ -278,7 +286,7 @@ export const useRaceStore = create<RaceStoreState>((set, get) => ({
             onChar(opp.typing, entry[1], entry[0]);
           }
         }
-        stepCar(opp.racer, opp.typing, opp.car, nextTimeMs, DT, raceDistance);
+        stepCar(opp.racer, opp.typing, opp.car, nextTimeMs, dt, raceDistance, undefined, playerSim.d);
       }
     }
 
