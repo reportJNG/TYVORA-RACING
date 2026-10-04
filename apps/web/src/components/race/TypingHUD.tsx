@@ -3,20 +3,28 @@ import React, { useEffect, useRef } from 'react';
 import { Zap, AlertTriangle } from 'lucide-react';
 import { useTypingStore } from '../../stores/useTypingStore.js';
 import { useRaceStore } from '../../stores/useRaceStore.js';
-import { useSettingsStore } from '../../stores/useSettingsStore.js';
+import { TypingStream } from './TypingStream.js';
 
 export interface TypingHUDProps {
   isRacing: boolean;
 }
 
 export const TypingHUD: React.FC<TypingHUDProps> = React.memo(({ isRacing }) => {
-  const { snapshot, typeChar, typeBackspace, typeWordBackspace, tickSnapshot } = useTypingStore();
+  const typeChar = useTypingStore((state) => state.typeChar);
+  const typeBackspace = useTypingStore((state) => state.typeBackspace);
+  const typeWordBackspace = useTypingStore((state) => state.typeWordBackspace);
+  const tickSnapshot = useTypingStore((state) => state.tickSnapshot);
+
+  const streak = useTypingStore((state) => state.snapshot.streak);
+  const mistakes = useTypingStore((state) => state.snapshot.mistakes);
+  const isFullWithErrors = useTypingStore((state) => state.snapshot.isFullWithErrors);
+  const liveWpm = useTypingStore((state) => state.snapshot.smoothedWpm || state.snapshot.liveWpm);
+  const accuracy = useTypingStore((state) => state.snapshot.accuracy);
+
   const playerSpeedKmh = useRaceStore((state) => Math.round(state.playerSim.v * 3.6));
   const currentRound = useRaceStore((state) => state.currentRound);
   const totalRounds = useRaceStore((state) => state.totalRounds);
-  const { largeText } = useSettingsStore();
 
-  const containerRef = useRef<HTMLDivElement>(null);
   const raceTimeRef = useRef<number>(0);
 
   // Keep raceTimeRef synced with store without re-running effects
@@ -26,7 +34,7 @@ export const TypingHUD: React.FC<TypingHUDProps> = React.memo(({ isRacing }) => 
     });
   }, []);
 
-  // Tick snapshot metrics every 150ms for live WPM calculation
+  // Tick snapshot metrics every 150ms for live WPM smoothing
   useEffect(() => {
     if (!isRacing) return;
     const interval = setInterval(() => {
@@ -69,8 +77,6 @@ export const TypingHUD: React.FC<TypingHUDProps> = React.memo(({ isRacing }) => 
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isRacing, typeChar, typeBackspace, typeWordBackspace]);
 
-  const { target, K, states, isFullWithErrors, streak, liveWpm, accuracy, mistakes } = snapshot;
-
   const hasMistakes = mistakes > 0;
   const isHighStreak = streak >= 10;
   const boostPercent = Math.min(30, Math.round((streak / 50) * 30));
@@ -85,8 +91,7 @@ export const TypingHUD: React.FC<TypingHUDProps> = React.memo(({ isRacing }) => 
 
   return (
     <div
-      ref={containerRef}
-      className={`w-full max-w-4xl mx-auto rounded-[8px] p-5 md:p-6 select-none transition-all duration-150 backdrop-blur-md ${
+      className={`w-full max-w-4xl mx-auto rounded-[8px] p-4 md:p-5 select-none transition-all duration-150 backdrop-blur-md ${
         hasMistakes
           ? 'bg-surface/90 border border-danger/60 shadow-[0_0_24px_rgba(239,68,68,0.25)]'
           : isHighStreak
@@ -95,7 +100,7 @@ export const TypingHUD: React.FC<TypingHUDProps> = React.memo(({ isRacing }) => 
       }`}
     >
       {/* TOP INSTRUMENT STATUS BAR */}
-      <div className="flex items-center justify-between text-[11px] font-display uppercase tracking-widest text-text-muted pb-2.5 mb-3 border-b border-border/60">
+      <div className="flex items-center justify-between text-[11px] font-display uppercase tracking-widest text-text-muted pb-2 mb-2 border-b border-border/60">
         <div className="flex items-center gap-3">
           <span className="text-accent font-bold">
             STAGE {currentRound} / {totalRounds}
@@ -113,47 +118,20 @@ export const TypingHUD: React.FC<TypingHUDProps> = React.memo(({ isRacing }) => 
           {mistakes > 0 && (
             <span className="text-danger flex items-center gap-1 font-semibold">
               <AlertTriangle className="w-3.5 h-3.5" />
-              <span>{mistakes} {mistakes === 1 ? 'ERROR' : 'ERRORS'}</span>
+              <span>
+                {mistakes} {mistakes === 1 ? 'ERROR' : 'ERRORS'}
+              </span>
             </span>
           )}
         </div>
       </div>
 
-      {/* TYPING TEXT STREAM */}
-      <div
-        className={`font-mono leading-relaxed tracking-wider break-words py-1 ${
-          largeText ? 'text-2xl md:text-3xl' : 'text-xl md:text-2xl'
-        }`}
-      >
-        {target.split('').map((char, idx) => {
-          const state = states[idx]; // 0: pending, 1: correct, 2: wrong, 3: current
-          const isCursor = idx === K;
-
-          let colorClass = 'text-text-muted/40';
-          if (state === 1) {
-            colorClass = 'text-text font-medium'; // correct
-          } else if (state === 2) {
-            colorClass =
-              'text-danger bg-danger/25 underline decoration-danger decoration-2 font-bold px-0.5 rounded-sm'; // mistake
-          }
-
-          return (
-            <span key={idx} className="relative inline-block">
-              {/* Active High-Visibility Caret Pill */}
-              {isCursor && (
-                <span className="absolute -left-[2px] top-0.5 bottom-0.5 w-[3px] bg-accent rounded-full animate-caret shadow-[0_0_10px_rgba(255,85,28,0.95)] z-10" />
-              )}
-              <span className={colorClass}>
-                {char === ' ' && state === 2 ? '·' : char}
-              </span>
-            </span>
-          );
-        })}
-      </div>
+      {/* KINETIC ROLLING WORD WINDOW STREAM */}
+      <TypingStream />
 
       {/* ERROR CORRECTION HINT */}
       {isFullWithErrors && (
-        <div className="mt-3 pt-2 border-t border-danger/30 flex items-center justify-between text-danger text-xs font-display uppercase tracking-widest font-bold">
+        <div className="mt-2.5 pt-2 border-t border-danger/30 flex items-center justify-between text-danger text-xs font-display uppercase tracking-widest font-bold">
           <span className="flex items-center gap-1.5 animate-pulse">
             <span className="w-2 h-2 rounded-full bg-danger" />
             <span>FIX ERRORS TO CROSS FINISH LINE</span>
@@ -165,12 +143,14 @@ export const TypingHUD: React.FC<TypingHUDProps> = React.memo(({ isRacing }) => 
       )}
 
       {/* INTEGRATED BOTTOM TELEMETRY STRIP */}
-      <div className="mt-4 pt-3 border-t border-border/60 flex items-center justify-between text-xs font-display uppercase tracking-wider">
+      <div className="mt-3 pt-2.5 border-t border-border/60 flex items-center justify-between text-xs font-display uppercase tracking-wider">
         {/* Speedometer & Gear */}
         <div className="flex items-baseline gap-2">
           <span
             className={`font-bold text-2xl md:text-3xl tabular-nums leading-none tracking-tight ${
-              playerSpeedKmh >= 180 ? 'text-accent drop-shadow-[0_0_12px_rgba(255,85,28,0.6)]' : 'text-text'
+              playerSpeedKmh >= 180
+                ? 'text-accent drop-shadow-[0_0_12px_rgba(255,85,28,0.6)]'
+                : 'text-text'
             }`}
           >
             {playerSpeedKmh}
@@ -189,7 +169,9 @@ export const TypingHUD: React.FC<TypingHUDProps> = React.memo(({ isRacing }) => 
 
           <div className="flex items-baseline gap-1">
             <span className="text-[10px] text-text-muted">ACC:</span>
-            <span className="text-base md:text-lg font-bold text-text tabular-nums">{accuracy}%</span>
+            <span className="text-base md:text-lg font-bold text-text tabular-nums">
+              {accuracy}%
+            </span>
           </div>
         </div>
       </div>

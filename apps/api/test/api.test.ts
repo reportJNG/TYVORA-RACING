@@ -180,6 +180,58 @@ describe('TypeRace API & Simulation Replay Verification', () => {
     expect(finishData.error).toContain('Anti-cheat violation');
   });
 
+  it('verifies client replay with typos corrected via Backspace and WBS', async () => {
+    // 1. Request race
+    const raceRes = await fetch(`${baseUrl}/api/races`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ carId: 'volta-e', difficulty: 'easy' }),
+    });
+    const raceData = await raceRes.json();
+    const raceId = raceData.raceId;
+    const passageText: string = raceData.passage.text;
+
+    // 2. Type first 5 chars, make a typo, backspace it, then continue
+    const keystrokesLog: Array<[number, string]> = [];
+    let currentMs = 150;
+
+    // First char
+    keystrokesLog.push([currentMs, passageText[0]]);
+    currentMs += 100;
+
+    // Typo!
+    keystrokesLog.push([currentMs, 'x']);
+    currentMs += 100;
+
+    // Backspace correction
+    keystrokesLog.push([currentMs, 'BS']);
+    currentMs += 100;
+
+    // Rest of text
+    for (let i = 1; i < passageText.length; i++) {
+      currentMs += 100;
+      keystrokesLog.push([currentMs, passageText[i]]);
+    }
+
+    const finishRes = await fetch(`${baseUrl}/api/races/${raceId}/finish`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        completedAt: currentMs,
+        finishMs: currentMs,
+        finalWpm: 90,
+        accuracy: 98,
+        mistakes: 1,
+        keystrokesLog,
+      }),
+    });
+
+    expect(finishRes.status).toBe(200);
+    const finishData = await finishRes.json();
+    expect(finishData.verified).toBe(true);
+    expect(finishData.wpm).toBeGreaterThan(0);
+  });
+
   it('returns global leaderboard rankings', async () => {
     const res = await fetch(`${baseUrl}/api/leaderboard`);
     expect(res.status).toBe(200);

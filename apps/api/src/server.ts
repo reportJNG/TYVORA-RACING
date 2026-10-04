@@ -5,12 +5,14 @@ import {
   createTypingState,
   onChar,
   onBackspace,
+  onWordBackspace,
   liveWpm,
   finalWpm,
   accuracyPercentage,
   generateAiLog,
   AI_DIFFICULTY_PROFILES,
   Difficulty,
+  passageEngine,
 } from '@typerace/sim';
 
 export interface UserAccount {
@@ -301,11 +303,11 @@ export function createApp() {
     const userId = getUserIdFromReq(req) || 'guest';
     const { carId = 'meridian-gt', difficulty = 'normal' } = req.body;
 
+    const diff = (difficulty as Difficulty) || 'normal';
     const seed = Math.floor(Math.random() * 2147483647);
-    const passage = PASSAGES[seed % PASSAGES.length];
+    const passage = passageEngine.getRandomPassage(diff, seed);
 
     // Generate AI opponents via @typerace/sim
-    const diff = (difficulty as Difficulty) || 'normal';
     const profiles = AI_DIFFICULTY_PROFILES[diff] || AI_DIFFICULTY_PROFILES.normal;
 
     const rivalAi = generateAiLog(
@@ -405,8 +407,10 @@ export function createApp() {
       }
       previousTimestamp = ts;
 
-      if (key === 'Backspace') {
+      if (key === 'Backspace' || key === 'BS') {
         onBackspace(simTypingState, ts);
+      } else if (key === 'WBS') {
+        onWordBackspace(simTypingState, ts);
       } else if (typeof key === 'string' && key.length === 1) {
         onChar(simTypingState, key, ts);
       }

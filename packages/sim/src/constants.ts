@@ -1,4 +1,4 @@
-// packages/sim/src/constants.ts
+export type Difficulty = 'easy' | 'normal' | 'hard' | 'extreme';
 
 export const SIM_VERSION = 1;
 export const TICK_HZ = 120;

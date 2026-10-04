@@ -2,7 +2,8 @@
 import { KeystrokeEntry, createTypingState, onChar, onBackspace } from './typing.js';
 import { mulberry32, randInt, randChance } from './rng.js';
 
-export type Difficulty = 'easy' | 'normal' | 'hard' | 'extreme';
+import { Difficulty } from './constants.js';
+export type { Difficulty };
 
 export interface AiProfile {
   name: string;

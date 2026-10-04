@@ -17,8 +17,10 @@ import {
   onChar,
   onBackspace,
   KeystrokeEntry,
+  Passage,
+  passageEngine,
 } from '@typerace/sim';
-import { getRandomPassage, PassageItem, PASSAGES } from '../data/passages.js';
+import { PassageItem } from '../data/passages.js';
 import { audioEngine } from '../audio/AudioEngine.js';
 import { useTypingStore, setTypingMistakeListener } from './useTypingStore.js';
 import { useAuthStore } from './useAuthStore.js';
@@ -81,7 +83,7 @@ export interface RaceStoreState {
   selectedTrackId: string;
   customPaintColor: string | null;
   difficulty: Difficulty;
-  currentPassage: PassageItem;
+  currentPassage: Passage | PassageItem;
   raceDistance: number;
   countdownValue: number; // 3, 2, 1, 0 (GO)
   raceTimeMs: number;
@@ -106,25 +108,11 @@ export interface RaceStoreState {
   resetToCarSelect: () => void;
 }
 
-function getPassageForRound(difficulty: Difficulty, roundNumber: number): PassageItem {
-  if (roundNumber === 1) {
-    // Round 1: Warmup - shorter, accessible text
-    const pool = PASSAGES.filter((p) => p.difficulty === 'easy' || p.difficulty === 'normal');
-    return pool[Math.floor(Math.random() * pool.length)] || PASSAGES[0];
-  } else if (roundNumber === 2) {
-    // Round 2: Rhythm & Pace - standard text
-    const pool = PASSAGES.filter((p) => p.difficulty === (difficulty === 'easy' ? 'easy' : 'normal'));
-    return pool[Math.floor(Math.random() * pool.length)] || PASSAGES[1];
-  } else {
-    // Round 3: High-velocity climax - challenging/fast text
-    const pool = PASSAGES.filter(
-      (p) => p.difficulty === (difficulty === 'easy' ? 'normal' : difficulty === 'normal' ? 'hard' : 'extreme')
-    );
-    return pool[Math.floor(Math.random() * pool.length)] || PASSAGES[PASSAGES.length - 1];
-  }
+function getPassageForRound(difficulty: Difficulty, roundNumber: number, seed?: number, excludeIds?: string[]): Passage {
+  return passageEngine.getPassageForRound(difficulty, roundNumber, seed, excludeIds);
 }
 
-const defaultPassage = getRandomPassage('normal');
+const defaultPassage = passageEngine.getRandomPassage('normal');
 
 export const useRaceStore = create<RaceStoreState>((set, get) => ({
   status: 'idle',
@@ -135,8 +123,8 @@ export const useRaceStore = create<RaceStoreState>((set, get) => ({
   selectedTrackId: 'pacific-coast',
   customPaintColor: null,
   difficulty: 'normal',
-  currentPassage: defaultPassage,
-  raceDistance: defaultPassage.length * M,
+  currentPassage: defaultPassage as any,
+  raceDistance: defaultPassage.text.length * M,
   countdownValue: 3,
   raceTimeMs: 0,
   playerSim: createRacerSim('player', 'You', 'B', true),
@@ -150,13 +138,14 @@ export const useRaceStore = create<RaceStoreState>((set, get) => ({
   selectDifficulty: (difficulty: Difficulty) => set({ difficulty }),
 
   prepareRace: (roundNumber: number = 1) => {
-    const { difficulty, selectedCarId } = get();
+    const { difficulty, selectedCarId, roundResults } = get();
     const isNewMatch = roundNumber === 1;
-    const passage = getPassageForRound(difficulty, roundNumber);
-    const targetDistance = passage.length * M;
+    const excludeIds = isNewMatch ? [] : roundResults.map((r: any) => r.passageId).filter(Boolean);
+    const passage = getPassageForRound(difficulty, roundNumber, undefined, excludeIds);
+    const targetDistance = passage.text.length * M;
 
-    // Initialize player typing state
-    useTypingStore.getState().initText(passage.text);
+    // Initialize player typing state with rich Passage model
+    useTypingStore.getState().initPassage(passage);
 
     // Setup Player sim
     const playerSim = createRacerSim('player', 'You', 'B', true);

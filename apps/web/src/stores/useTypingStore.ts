@@ -6,16 +6,23 @@ import {
   onBackspace,
   onWordBackspace,
   getTypingSnapshot,
+  getWordWindow,
   TypingState,
   TypingSnapshot,
+  WordWindow,
+  Passage,
+  createPassage,
 } from '@typerace/sim';
 import { audioEngine } from '../audio/AudioEngine.js';
 
 export interface TypingStoreState {
+  passage: Passage;
   typingState: TypingState;
   snapshot: TypingSnapshot;
+  wordWindow: WordWindow;
   version: number;
 
+  initPassage: (passage: Passage) => void;
   initText: (target: string) => void;
   typeChar: (ch: string, tMs: number) => void;
   typeBackspace: (tMs: number) => void;
@@ -25,7 +32,8 @@ export interface TypingStoreState {
 }
 
 const INITIAL_TEXT = 'speed wins races on the open road';
-const initialSimState = createTypingState(INITIAL_TEXT);
+const initialPassage = createPassage({ id: 'init', text: INITIAL_TEXT, difficulty: 'normal' });
+const initialSimState = createTypingState(initialPassage);
 
 let onMistakeListener: (() => void) | null = null;
 
@@ -34,15 +42,31 @@ export function setTypingMistakeListener(listener: (() => void) | null) {
 }
 
 export const useTypingStore = create<TypingStoreState>((set, get) => ({
+  passage: initialPassage,
   typingState: initialSimState,
   snapshot: getTypingSnapshot(initialSimState, 0),
+  wordWindow: getWordWindow(initialSimState),
   version: 0,
 
-  initText: (target: string) => {
-    const nextState = createTypingState(target);
+  initPassage: (passage: Passage) => {
+    const nextState = createTypingState(passage);
     set({
+      passage,
       typingState: nextState,
       snapshot: getTypingSnapshot(nextState, 0),
+      wordWindow: getWordWindow(nextState),
+      version: get().version + 1,
+    });
+  },
+
+  initText: (target: string) => {
+    const passage = createPassage({ id: `target_${Date.now()}`, text: target, difficulty: 'normal' });
+    const nextState = createTypingState(passage);
+    set({
+      passage,
+      typingState: nextState,
+      snapshot: getTypingSnapshot(nextState, 0),
+      wordWindow: getWordWindow(nextState),
       version: get().version + 1,
     });
   },
@@ -66,6 +90,7 @@ export const useTypingStore = create<TypingStoreState>((set, get) => ({
 
     set({
       snapshot: getTypingSnapshot(typingState, tMs),
+      wordWindow: getWordWindow(typingState),
       version: version + 1,
     });
   },
@@ -77,6 +102,7 @@ export const useTypingStore = create<TypingStoreState>((set, get) => ({
 
     set({
       snapshot: getTypingSnapshot(typingState, tMs),
+      wordWindow: getWordWindow(typingState),
       version: version + 1,
     });
   },
@@ -88,21 +114,25 @@ export const useTypingStore = create<TypingStoreState>((set, get) => ({
 
     set({
       snapshot: getTypingSnapshot(typingState, tMs),
+      wordWindow: getWordWindow(typingState),
       version: version + 1,
     });
   },
 
   tickSnapshot: (tNow: number) => {
     const { typingState } = get();
-    set({ snapshot: getTypingSnapshot(typingState, tNow) });
+    set({
+      snapshot: getTypingSnapshot(typingState, tNow),
+    });
   },
 
   resetTyping: () => {
-    const { typingState } = get();
-    const nextState = createTypingState(typingState.target);
+    const { passage } = get();
+    const nextState = createTypingState(passage);
     set({
       typingState: nextState,
       snapshot: getTypingSnapshot(nextState, 0),
+      wordWindow: getWordWindow(nextState),
       version: get().version + 1,
     });
   },

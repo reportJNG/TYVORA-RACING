@@ -1,5 +1,6 @@
 // packages/sim/src/typing.ts
 import { BURST_WINDOW_MS } from './constants.js';
+import { Passage, createPassage, PassageWord } from './passage.js';
 
 export type PositionState = 0 | 1 | 2 | 3; // 0: pending, 1: correct, 2: wrong, 3: current
 
@@ -12,10 +13,13 @@ export interface TypingEvent {
   type: 'correct' | 'mistake' | 'backspace' | 'ignored_full' | 'ignored_empty';
   index?: number;
   t: number;
+  char?: string;
 }
 
 export interface TypingState {
   target: string;
+  passage?: Passage;
+  words: PassageWord[];
   L: number; // target length
   buffer: string[];
   K: number; // cursor index (buffer length)
@@ -30,6 +34,7 @@ export interface TypingState {
   completedAt: number | null; // race ms when completed
   correctKeyTimes: number[]; // timestamps of correct keystrokes for burst WPM
   log: KeystrokeEntry[];
+  smoothedWpm: number;
 }
 
 export interface TypingSnapshot {
@@ -42,15 +47,64 @@ export interface TypingSnapshot {
   streak: number;
   longestStreak: number;
   liveWpm: number;
+  smoothedWpm: number;
   accuracy: number;
+  accuracyFloat: number;
   isFullWithErrors: boolean;
   isComplete: boolean;
   completedAt: number | null;
+  progress: number;
+  currentWordIndex: number;
+  totalWords: number;
 }
 
-export function createTypingState(target: string): TypingState {
+export interface WordCharacterState {
+  char: string;
+  index: number;
+  state: PositionState; // 0: pending, 1: correct, 2: wrong, 3: current
+  isCursor: boolean;
+}
+
+export interface WordWindowBlock {
+  wordIndex: number;
+  word: string;
+  startIndex: number;
+  endIndex: number;
+  status: 'completed' | 'current' | 'upcoming';
+  characters: WordCharacterState[];
+  hasMistake: boolean;
+  isFullyCorrect: boolean;
+  hasTrailingSpace: boolean;
+  trailingSpaceState?: PositionState;
+  isTrailingSpaceCursor?: boolean;
+}
+
+export interface WordWindowOptions {
+  pastWords?: number;   // default 1-2
+  futureWords?: number; // default 4-6
+}
+
+export interface WordWindow {
+  blocks: WordWindowBlock[];
+  currentWordIndex: number;
+  totalWords: number;
+  cursorCharIndex: number;
+  cursorInCurrentWordIndex: number;
+  isComplete: boolean;
+  isFullWithErrors: boolean;
+}
+
+export function createTypingState(targetOrPassage: string | Passage): TypingState {
+  const isPassage = typeof targetOrPassage !== 'string' && 'words' in targetOrPassage;
+  const target = isPassage ? targetOrPassage.text : (targetOrPassage as string);
+  const passage = isPassage
+    ? (targetOrPassage as Passage)
+    : createPassage({ id: 'adhoc', text: target, difficulty: 'normal' });
+
   return {
     target,
+    passage,
+    words: passage.words,
     L: target.length,
     buffer: [],
     K: 0,
@@ -65,12 +119,18 @@ export function createTypingState(target: string): TypingState {
     completedAt: null,
     correctKeyTimes: [],
     log: [],
+    smoothedWpm: 0,
   };
 }
 
+/**
+ * Handles character input according to the Golden Rule:
+ * Every character position evaluates independently.
+ * Mistakes never cascade.
+ */
 export function onChar(state: TypingState, ch: string, t: number): TypingEvent {
   if (state.K >= state.L) {
-    return { type: 'ignored_full', t };
+    return { type: 'ignored_full', t, char: ch };
   }
 
   const expected = state.target[state.K];
@@ -93,13 +153,21 @@ export function onChar(state: TypingState, ch: string, t: number): TypingEvent {
     state.streak = 0;
   }
 
+  // Check completion criteria: must reach end of target with ZERO wrong characters
   if (state.K === state.L && state.W === 0 && state.completedAt === null) {
     state.completedAt = t;
   }
 
-  return { type: ok ? 'correct' : 'mistake', index: state.K - 1, t };
+  return { type: ok ? 'correct' : 'mistake', index: state.K - 1, t, char: ch };
 }
 
+/**
+ * Handles Backspace navigation and correction:
+ * - Backspace is a first-class navigation/correction operation, NEVER an extra mistake
+ * - Pops the last typed character from the buffer
+ * - Updates correct/wrong count accordingly
+ * - Resets completion status if backspacing after finishing
+ */
 export function onBackspace(state: TypingState, t: number): TypingEvent {
   if (state.K === 0) {
     return { type: 'ignored_empty', t };
@@ -116,7 +184,7 @@ export function onBackspace(state: TypingState, t: number): TypingEvent {
     state.W -= 1;
   }
 
-  // If backspacing while completed (rare), reset completion
+  // Reset completedAt if backspacing from full
   if (state.K < state.L || state.W > 0) {
     state.completedAt = null;
   }
@@ -124,6 +192,10 @@ export function onBackspace(state: TypingState, t: number): TypingEvent {
   return { type: 'backspace', index: state.K, t };
 }
 
+/**
+ * Handles Word-level Backspace (Ctrl+Backspace / Alt+Backspace / Option+Backspace)
+ * Cleans back to the previous word boundary without creating fake mistakes.
+ */
 export function onWordBackspace(state: TypingState, t: number): TypingEvent[] {
   if (state.K === 0) {
     return [{ type: 'ignored_empty', t }];
@@ -167,7 +239,6 @@ export function burstWpm(state: TypingState, tNow: number): number {
   if (state.correctKeyTimes.length === 0 || tNow <= 0) return 0;
 
   const windowStart = Math.max(0, tNow - BURST_WINDOW_MS);
-  // Count correct keystrokes in [windowStart, tNow]
   let count = 0;
   for (let i = state.correctKeyTimes.length - 1; i >= 0; i--) {
     const kt = state.correctKeyTimes[i];
@@ -189,6 +260,17 @@ export function liveWpm(state: TypingState, tNow: number): number {
   return Math.round((state.C / 5) / minutes);
 }
 
+export function computeSmoothedWpm(state: TypingState, tNow: number): number {
+  if (tNow < 800) return 0;
+  const rawLive = (state.C / 5) / (tNow / 60000);
+  const burst = burstWpm(state, tNow);
+
+  // Blend cumulative and burst for a rock-solid, jitter-free live reading
+  const blended = tNow < 3000 ? 0.6 * burst + 0.4 * rawLive : 0.75 * rawLive + 0.25 * burst;
+  state.smoothedWpm = Math.round(blended);
+  return state.smoothedWpm;
+}
+
 export function finalWpm(state: TypingState): number {
   if (!state.completedAt || state.completedAt <= 0) return 0;
   const minutes = state.completedAt / 60000;
@@ -197,21 +279,48 @@ export function finalWpm(state: TypingState): number {
 
 export function accuracyPercentage(state: TypingState): number {
   if (state.totalKeystrokes === 0) return 100;
-  // Floored so that any mistake prevents 100%
   return Math.min(100, Math.floor((state.correctKeystrokes / state.totalKeystrokes) * 100));
 }
 
+export function accuracyFloatPercentage(state: TypingState): number {
+  if (state.totalKeystrokes === 0) return 100;
+  return Number(Math.min(100, (state.correctKeystrokes / state.totalKeystrokes) * 100).toFixed(1));
+}
+
+/**
+ * Finds the index of the word currently being typed based on cursor index K
+ */
+export function getCurrentWordIndex(words: PassageWord[], K: number, L: number): number {
+  if (words.length === 0) return 0;
+  if (K >= L) return Math.max(0, words.length - 1);
+
+  for (let i = 0; i < words.length; i++) {
+    // If K is before or within word boundaries, or at the trailing space after this word
+    const nextStart = i < words.length - 1 ? words[i + 1].startIndex : L;
+    if (K < nextStart) {
+      return i;
+    }
+  }
+
+  return words.length - 1;
+}
+
+/**
+ * Generates an immutable snapshot of current typing metrics and character states
+ */
 export function getTypingSnapshot(state: TypingState, tNow: number): TypingSnapshot {
   const states = new Uint8Array(state.L);
   for (let i = 0; i < state.L; i++) {
     if (i < state.K) {
       states[i] = state.buffer[i] === state.target[i] ? 1 : 2;
     } else if (i === state.K) {
-      states[i] = 3; // current
+      states[i] = 3; // current cursor
     } else {
       states[i] = 0; // pending
     }
   }
+
+  const currentWordIndex = getCurrentWordIndex(state.words, state.K, state.L);
 
   return {
     target: state.target,
@@ -223,9 +332,197 @@ export function getTypingSnapshot(state: TypingState, tNow: number): TypingSnaps
     streak: state.streak,
     longestStreak: state.longestStreak,
     liveWpm: liveWpm(state, tNow),
+    smoothedWpm: computeSmoothedWpm(state, tNow),
     accuracy: accuracyPercentage(state),
+    accuracyFloat: accuracyFloatPercentage(state),
     isFullWithErrors: state.K === state.L && state.W > 0,
     isComplete: state.K === state.L && state.W === 0,
     completedAt: state.completedAt,
+    progress: state.L > 0 ? Number((state.K / state.L).toFixed(3)) : 0,
+    currentWordIndex,
+    totalWords: state.words.length,
   };
+}
+
+/**
+ * Generates the Word Window model for the kinetic rolling text interface.
+ * Exposes approximately 1-2 past words, the current focused word, and 4-6 upcoming words.
+ */
+export function getWordWindow(
+  state: TypingState,
+  options: WordWindowOptions = {}
+): WordWindow {
+  const pastWords = options.pastWords ?? 1;
+  const futureWords = options.futureWords ?? 5; // Total ~6-7 visible words for eye-lead
+
+  const words = state.words;
+  const totalWords = words.length;
+  const currentWordIndex = getCurrentWordIndex(words, state.K, state.L);
+
+  const startWordIdx = Math.max(0, currentWordIndex - pastWords);
+  const endWordIdx = Math.min(totalWords - 1, currentWordIndex + futureWords);
+
+  const blocks: WordWindowBlock[] = [];
+
+  for (let wIdx = startWordIdx; wIdx <= endWordIdx; wIdx++) {
+    const wordDef = words[wIdx];
+    const isCurrent = wIdx === currentWordIndex;
+    const isPast = wIdx < currentWordIndex;
+
+    const charStates: WordCharacterState[] = [];
+    let wordHasMistake = false;
+    let wordAllCorrect = true;
+
+    for (let cIdx = wordDef.startIndex; cIdx < wordDef.endIndex; cIdx++) {
+      const char = state.target[cIdx];
+      let posState: PositionState = 0;
+      const isCursor = cIdx === state.K;
+
+      if (cIdx < state.K) {
+        const isOk = state.buffer[cIdx] === char;
+        posState = isOk ? 1 : 2;
+        if (!isOk) wordHasMistake = true;
+        if (!isOk) wordAllCorrect = false;
+      } else if (cIdx === state.K) {
+        posState = 3;
+        wordAllCorrect = false;
+      } else {
+        posState = 0;
+        wordAllCorrect = false;
+      }
+
+      charStates.push({
+        char,
+        index: cIdx,
+        state: posState,
+        isCursor,
+      });
+    }
+
+    // Trailing space check (if not last word in passage)
+    const hasTrailingSpace = wordDef.endIndex < state.L && state.target[wordDef.endIndex] === ' ';
+    let trailingSpaceState: PositionState | undefined;
+    let isTrailingSpaceCursor: boolean | undefined;
+
+    if (hasTrailingSpace) {
+      const spaceIdx = wordDef.endIndex;
+      isTrailingSpaceCursor = spaceIdx === state.K;
+
+      if (spaceIdx < state.K) {
+        const spaceOk = state.buffer[spaceIdx] === ' ';
+        trailingSpaceState = spaceOk ? 1 : 2;
+        if (!spaceOk) wordHasMistake = true;
+      } else if (spaceIdx === state.K) {
+        trailingSpaceState = 3;
+      } else {
+        trailingSpaceState = 0;
+      }
+    }
+
+    blocks.push({
+      wordIndex: wIdx,
+      word: wordDef.word,
+      startIndex: wordDef.startIndex,
+      endIndex: wordDef.endIndex,
+      status: isCurrent ? 'current' : isPast ? 'completed' : 'upcoming',
+      characters: charStates,
+      hasMistake: wordHasMistake,
+      isFullyCorrect: isPast && wordAllCorrect && !wordHasMistake,
+      hasTrailingSpace,
+      trailingSpaceState,
+      isTrailingSpaceCursor,
+    });
+  }
+
+  const currentWord = words[currentWordIndex];
+  const cursorInCurrentWordIndex = currentWord
+    ? Math.max(0, state.K - currentWord.startIndex)
+    : 0;
+
+  return {
+    blocks,
+    currentWordIndex,
+    totalWords,
+    cursorCharIndex: state.K,
+    cursorInCurrentWordIndex,
+    isComplete: state.K === state.L && state.W === 0,
+    isFullWithErrors: state.K === state.L && state.W > 0,
+  };
+}
+
+/**
+ * Clean Object-Oriented Session Contract for the Typing Engine
+ */
+export class TypingSession {
+  public state: TypingState;
+  public passage: Passage;
+
+  constructor(targetOrPassage: string | Passage) {
+    if (typeof targetOrPassage === 'string') {
+      this.passage = createPassage({
+        id: `session_${Date.now()}`,
+        text: targetOrPassage,
+        difficulty: 'normal',
+      });
+    } else {
+      this.passage = targetOrPassage;
+    }
+    this.state = createTypingState(this.passage);
+  }
+
+  public handleCharacter(char: string, tMs: number): TypingEvent {
+    return onChar(this.state, char, tMs);
+  }
+
+  public handleBackspace(tMs: number): TypingEvent {
+    return onBackspace(this.state, tMs);
+  }
+
+  public handleWordBackspace(tMs: number): TypingEvent[] {
+    return onWordBackspace(this.state, tMs);
+  }
+
+  public getState(): Readonly<TypingState> {
+    return this.state;
+  }
+
+  public getSnapshot(tNow: number): TypingSnapshot {
+    return getTypingSnapshot(this.state, tNow);
+  }
+
+  public getWordWindow(options?: WordWindowOptions): WordWindow {
+    return getWordWindow(this.state, options);
+  }
+
+  public getProgress(): number {
+    return this.state.L > 0 ? Number((this.state.K / this.state.L).toFixed(3)) : 0;
+  }
+
+  public getLiveWpm(tNow: number): number {
+    return liveWpm(this.state, tNow);
+  }
+
+  public getSmoothedWpm(tNow: number): number {
+    return computeSmoothedWpm(this.state, tNow);
+  }
+
+  public getFinalWpm(): number {
+    return finalWpm(this.state);
+  }
+
+  public getAccuracy(): number {
+    return accuracyPercentage(this.state);
+  }
+
+  public isComplete(): boolean {
+    return this.state.K === this.state.L && this.state.W === 0;
+  }
+
+  public reset(): void {
+    this.state = createTypingState(this.passage);
+  }
+}
+
+export function createTypingSession(targetOrPassage: string | Passage): TypingSession {
+  return new TypingSession(targetOrPassage);
 }
