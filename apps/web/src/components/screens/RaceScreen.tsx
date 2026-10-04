@@ -18,7 +18,6 @@ export const RaceScreen: React.FC<RaceScreenProps> = ({ onBackToCarSelect, onHom
   const status = useRaceStore((state) => state.status);
   const currentRound = useRaceStore((state) => state.currentRound);
   const totalRounds = useRaceStore((state) => state.totalRounds);
-  const selectedTrackId = useRaceStore((state) => state.selectedTrackId);
   const pauseRace = useRaceStore((state) => state.pauseRace);
   const prepareRace = useRaceStore((state) => state.prepareRace);
   const startCountdown = useRaceStore((state) => state.startCountdown);
@@ -72,29 +71,41 @@ export const RaceScreen: React.FC<RaceScreenProps> = ({ onBackToCarSelect, onHom
     startCountdown();
   };
 
+  const playerD = useRaceStore((state) => state.playerSim.d);
+  const opponents = useRaceStore((state) => state.opponents);
+  let rank = 1;
+  for (const opp of opponents) {
+    if (opp.racer.d > playerD) rank++;
+  }
+  const posLabel = rank === 1 ? '1ST' : rank === 2 ? '2ND' : '3RD';
+
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-bg select-none">
+      {/* TOP EDGE HAIRLINE PROGRESS RAIL */}
+      <div className="absolute top-0 inset-x-0 z-30 pointer-events-none">
+        <RaceProgressBar />
+      </div>
+
       {/* 3D WEBGL RACING CANVAS (Hero Viewport) */}
       <RaceCanvas />
 
-      {/* TOP INSTRUMENT BAR: CIRCUIT INFO, PROGRESS RAIL & ROUND INDICATOR */}
-      <div className="absolute top-4 inset-x-0 z-20 flex items-center justify-between px-6 pointer-events-none gap-4">
+      {/* MINIMAL TOP BAR: CLEAN ESC & POSITION / ROUND STATUS */}
+      <div className="absolute top-3 inset-x-0 z-20 flex items-center justify-between px-5 pointer-events-none">
+        <button
+          onClick={pauseRace}
+          className="pointer-events-auto text-[10px] font-mono uppercase tracking-widest text-white/50 hover:text-white px-2 py-1 rounded bg-black/40 backdrop-blur-md border border-white/10 transition-colors"
+        >
+          ESC // PAUSE
+        </button>
+
         <div className="flex items-center gap-2 pointer-events-auto">
-          <span className="text-[11px] font-display uppercase tracking-widest text-text-muted glass-panel px-2.5 py-1 rounded-[4px] shadow-sm">
-            ESC // PAUSE
+          <span className="text-[11px] font-display font-bold uppercase tracking-wider text-accent px-2.5 py-0.5 rounded bg-black/40 backdrop-blur-md border border-accent/30 shadow-[0_0_12px_rgba(255,85,28,0.2)]">
+            {posLabel}
           </span>
-          <span className="hidden sm:inline-block text-[11px] font-display uppercase tracking-widest text-text glass-panel px-3 py-1 rounded-[4px] shadow-sm font-semibold capitalize">
-            {selectedTrackId ? selectedTrackId.replace('-', ' ') : 'Pacific Coast'}
+          <span className="text-[10px] font-mono uppercase tracking-widest text-white/60 px-2 py-0.5 rounded bg-black/40 backdrop-blur-md border border-white/10">
+            R{currentRound}/{totalRounds}
           </span>
         </div>
-
-        <div className="flex-1 max-w-2xl pointer-events-auto">
-          <RaceProgressBar />
-        </div>
-
-        <span className="text-[11px] font-display uppercase tracking-widest text-accent glass-panel px-3.5 py-1 rounded-[4px] font-bold shadow-[0_0_12px_rgba(255,85,28,0.25)] pointer-events-auto">
-          ROUND {currentRound} / {totalRounds}
-        </span>
       </div>
 
       {/* COUNTDOWN 3-2-1-GO */}

@@ -42,18 +42,18 @@ export interface RoundProgressionConfig {
 
 export const DEFAULT_ROUND_PROGRESSION: Record<number, RoundProgressionConfig> = {
   1: {
-    minLength: 90,
-    maxLength: 110,
+    minLength: 120,
+    maxLength: 170,
     difficultyPool: ['easy', 'normal'],
   },
   2: {
-    minLength: 115,
-    maxLength: 130,
+    minLength: 165,
+    maxLength: 220,
     difficultyPool: ['normal'],
   },
   3: {
-    minLength: 130,
-    maxLength: 165,
+    minLength: 210,
+    maxLength: 280,
     difficultyPool: ['hard', 'extreme'],
   },
 };
@@ -226,179 +226,179 @@ interface RawPassageDef {
 }
 
 export const RAW_PASSAGES: RawPassageDef[] = [
-  // EASY: 90 - 110 characters, natural rhythm, accessible vocabulary
+  // EASY: 130 - 165 characters, natural rhythm, accessible vocabulary
   {
     id: 'easy_01',
     difficulty: 'easy',
-    text: 'keep your eyes on the road ahead and type every word with steady rhythm to reach top speed.',
+    text: 'keep your eyes on the road ahead and type every word with steady rhythm to reach top speed while your engine hums down the wide open coastal boulevard.',
     category: 'racing',
   },
   {
     id: 'easy_02',
     difficulty: 'easy',
-    text: 'smooth fingers make the engine roar as you chase the finish line with clean and fast typing.',
+    text: 'smooth fingers make the engine roar as you chase the finish line with clean and fast typing, overtaking the competition one clean word at a time.',
     category: 'racing',
   },
   {
     id: 'easy_03',
     difficulty: 'easy',
-    text: 'the highway is clear tonight and your car will fly as long as you do not hit any wrong keys.',
+    text: 'the highway is clear tonight and your car will fly as long as you do not hit any wrong keys, gliding smoothly past every turn toward victory.',
     category: 'racing',
   },
   {
     id: 'easy_04',
     difficulty: 'easy',
-    text: 'speed comes from practice and staying calm when the road opens up before your headlights.',
+    text: 'speed comes from practice and staying calm when the road opens up before your headlights, letting natural instinct steer you into first place.',
     category: 'focus',
   },
   {
     id: 'easy_05',
     difficulty: 'easy',
-    text: 'drive fast and stay accurate on every corner to build your streak and take home the victory.',
+    text: 'drive fast and stay accurate on every corner to build your streak and take home the victory as the crowd cheers for your championship win.',
     category: 'racing',
   },
   {
     id: 'easy_06',
     difficulty: 'easy',
-    text: 'listen to the hum of the tires on asphalt while your hands flow across the keyboard effortlessly.',
+    text: 'listen to the hum of the tires on asphalt while your hands flow across the keyboard effortlessly, feeling the car accelerate with every phrase.',
     category: 'focus',
   },
   {
     id: 'easy_07',
     difficulty: 'easy',
-    text: 'every clean word gives you a burst of speed so stay relaxed and let your reflexes take over.',
+    text: 'every clean word gives you a burst of speed so stay relaxed and let your reflexes take over as you surge toward the chequered flag on the horizon.',
     category: 'racing',
   },
   {
     id: 'easy_08',
     difficulty: 'easy',
-    text: 'grip the wheel with confidence and accelerate down the long open runway toward the sunset.',
+    text: 'grip the wheel with confidence and accelerate down the long open runway toward the sunset, keeping your rhythm steady until the race is won.',
     category: 'street',
   },
 
-  // NORMAL: 115 - 130 characters, punctuation, standard capitalization, momentum
+  // NORMAL: 170 - 215 characters, punctuation, standard capitalization, momentum
   {
     id: 'norm_01',
     difficulty: 'normal',
-    text: 'Every race is a battle between your fingers and the clock. Maintain focus, correct mistakes quickly, and accelerate.',
+    text: 'Every race is a battle between your fingers and the clock. Maintain focus, correct mistakes quickly, and accelerate down the straightaway to build an insurmountable lead over the pack.',
     category: 'racing',
   },
   {
     id: 'norm_02',
     difficulty: 'normal',
-    text: "When you make a mistake, don't panic. Tap Backspace, fix the error, and watch your engine rebuild momentum immediately.",
+    text: "When you make a mistake, don't panic. Tap Backspace, fix the error, and watch your engine rebuild momentum immediately as you slingshot through the slipstream of the rival car ahead.",
     category: 'mechanics',
   },
   {
     id: 'norm_03',
     difficulty: 'normal',
-    text: 'A great typist drives like a professional racer: smooth through the corners and relentlessly fast down every open straight.',
+    text: 'A great typist drives like a professional racer: smooth through the corners and relentlessly fast down every open straight, finding rhythm where others hesitate under pressure.',
     category: 'racing',
   },
   {
     id: 'norm_04',
     difficulty: 'normal',
-    text: 'The road belongs to the fastest driver who maintains a steady rhythm, avoiding early mistakes through every sharp turn.',
+    text: 'The road belongs to the fastest driver who maintains a steady cadence, avoiding early mistakes through every sharp turn while keeping their eyes locked on upcoming words ahead.',
     category: 'racing',
   },
   {
     id: 'norm_05',
     difficulty: 'normal',
-    text: 'Rhythm is your true engine. Type cleanly and the speedometer will climb as your car overtakes the competition with ease.',
+    text: 'Rhythm is your true engine. Type cleanly and the speedometer will climb as your car overtakes the competition with ease, carrying high momentum into the final sector of the circuit.',
     category: 'focus',
   },
   {
     id: 'norm_06',
     difficulty: 'normal',
-    text: 'Hold your lane as the tachometer climbs. When your fingers sync with the keystrokes, the entire circuit feels effortless.',
+    text: 'Hold your lane as the tachometer climbs. When your fingers sync with the keystrokes, the entire circuit feels effortless and every clean word injects pure boost into your velocity.',
     category: 'mechanics',
   },
   {
     id: 'norm_07',
     difficulty: 'normal',
-    text: 'Confidence breeds velocity on this straightaway. Scan the next two words before your fingertips finish the current one.',
+    text: 'Confidence breeds velocity on this straightaway. Scan the next two words before your fingertips finish the current one, anticipating every character with calm precision.',
     category: 'focus',
   },
   {
     id: 'norm_08',
     difficulty: 'normal',
-    text: 'Apex after apex, the race rewards consistency. Never rush ahead blindly; trust your cadence to carry you past the pack.',
+    text: 'Apex after apex, the race rewards consistency. Never rush ahead blindly; trust your cadence to carry you past the pack and claim the podium with flawless execution.',
     category: 'street',
   },
 
-  // HARD: 120 - 145 characters, advanced sentence structures, semicolons, quotes, numbers
+  // HARD: 210 - 255 characters, advanced sentence structures, semicolons, quotes, numbers
   {
     id: 'hard_01',
     difficulty: 'hard',
-    text: 'True velocity requires ruthless consistency; one careless typo drops your RPM, forcing you to fight for every lost second.',
+    text: 'True velocity requires ruthless consistency; one careless typo drops your RPM, forcing you to fight for every lost second. Recover fast, keep your composure, and push your machine past 280 km/h down Sector 3.',
     category: 'racing',
   },
   {
     id: 'hard_02',
     difficulty: 'hard',
-    text: 'The tunnel lights flash by at 240 km/h: "Rhythm is your throttle, accuracy is your steering." Never hesitate on the keys.',
+    text: 'The tunnel lights flash by at high speed: "Rhythm is your throttle, accuracy is your steering." Never hesitate on the keys when drafting behind rivals; slipstream aerodynamic advantage demands perfection.',
     category: 'racing',
   },
   {
     id: 'hard_03',
     difficulty: 'hard',
-    text: 'Precision under intense pressure separates champions from contenders; remember: raw velocity is nothing without control.',
+    text: 'Precision under intense pressure separates champions from contenders; remember: raw velocity is nothing without control. Balance your tempo across every sentence and watch your rival fade in the rearview mirror.',
     category: 'focus',
   },
   {
     id: 'hard_04',
     difficulty: 'hard',
-    text: 'Accelerate through the sweeping curves and keep your fingers moving; every clean keystroke injects fuel into your engine.',
+    text: 'Accelerate through the sweeping curves and keep your fingers moving; every clean keystroke injects fuel into your engine while maintaining 90+ WPM through technical hairpin corners and sudden chicanes.',
     category: 'racing',
   },
   {
     id: 'hard_05',
     difficulty: 'hard',
-    text: 'Night falls across the coastal ridge; the speedometer reads 210 km/h as you execute each phrase with surgical calm.',
+    text: 'Night falls across the coastal ridge; the speedometer reads 295 km/h as you execute each phrase with surgical calm, pulling ahead into the final straightaway under the brilliant stadium floodlights.',
     category: 'street',
   },
   {
     id: 'hard_06',
     difficulty: 'hard',
-    text: 'Tires screech against warm tarmac! Maintain a steady 90+ WPM cadence through the hairpin turn to secure your podium finish.',
+    text: 'Tires screech against warm tarmac! Maintain a steady cadence through the hairpin turn to secure your podium finish; let your muscle memory drive the vehicle smoothly past the finish line arch.',
     category: 'racing',
   },
   {
     id: 'hard_07',
     difficulty: 'hard',
-    text: 'Telemetry confirms optimal tire temperature: "Keep clean cadence down Sector 2; back off zero percent until the flag drops."',
+    text: 'Telemetry confirms optimal tire temperature: "Keep clean cadence down Sector 2; back off zero percent until the flag drops." Shift your attention forward and lock in your winning split time.',
     category: 'endurance',
   },
 
-  // EXTREME: 125 - 165 characters, high technicality, symbols, brackets, exact commands
+  // EXTREME: 235 - 285 characters, high technicality, symbols, brackets, exact commands
   {
     id: 'extr_01',
     difficulty: 'extreme',
-    text: 'Telemetric check: 100% throttle, gear #6 engaged (RPM: 7,200). Can you maintain 120+ WPM without dropping accuracy below 98%?',
+    text: 'Telemetric check: 100% throttle, gear #6 engaged (RPM: 7,800). Can you maintain 110+ WPM without dropping accuracy below 98%? Execute every character cleanly to unleash the full horsepower of your hypercar!',
     category: 'technical',
   },
   {
     id: 'extr_02',
     difficulty: 'extreme',
-    text: 'SYSTEM NOTICE [v1.0]: Turbo-boost requires 25 consecutive hits! Break through Sector 03 at 300+ km/h and seal the championship.',
+    text: 'SYSTEM NOTICE [v1.0]: Turbo-boost requires 25 consecutive hits! Break through Sector 03 at 310+ km/h and seal the championship; zero typos allowed when navigating high-speed sweepers under the lights.',
     category: 'technical',
   },
   {
     id: 'extr_03',
     difficulty: 'extreme',
-    text: 'Code: SPEED-DEMON; Sector delta = -0.42s! Push into overdrive (WPM >= 125, mistakes = 0) and shatter the existing lap record.',
+    text: 'Code: SPEED-DEMON; Sector delta = -0.65s! Push into overdrive (WPM >= 120, mistakes = 0) and shatter the existing lap record; hold your line through the final bend and dominate the leaderboard.',
     category: 'technical',
   },
   {
     id: 'extr_04',
     difficulty: 'extreme',
-    text: 'STATUS: NITROUS ARMED [PSI: 940]; Shift into 7th gear at 8,500 RPM. Execute flawless strings (accuracy = 100%) for maximum boost!',
+    text: 'STATUS: NITROUS ARMED [PSI: 980]; Shift into 7th gear at 8,500 RPM. Execute flawless strings (accuracy = 100%) for maximum boost down the main straightaway before the final checkered flag descends!',
     category: 'technical',
   },
   {
     id: 'extr_05',
     difficulty: 'extreme',
-    text: 'Challenger alert: telemetry differential indicates 1.25s gap! Deploy Sector-4 overdrive; zero typos permitted across the grid.',
+    text: 'Challenger alert: telemetry differential indicates 0.85s gap! Deploy Sector-4 overdrive; zero typos permitted across the grid as you push your engine to the redline and capture the ultimate victory.',
     category: 'racing',
   },
 ];

@@ -108,7 +108,6 @@ export const App: React.FC = () => {
             onStartRace={() => setCurrentScreen('race')}
             onOpenGarage={() => setCurrentScreen('car-select')}
             onTryGame={() => setCurrentScreen('race')}
-            onOpenOnlineModal={() => setOnlineModalOpen(true)}
             onNavigateProfile={() => {
               if (currentUser) {
                 setCurrentScreen('profile');

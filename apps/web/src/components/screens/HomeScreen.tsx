@@ -15,7 +15,6 @@ export interface HomeScreenProps {
   onTryGame?: () => void;
   onStartRace?: () => void;
   onOpenGarage?: () => void;
-  onOpenOnlineModal?: () => void;
   onNavigateProfile?: () => void;
 }
 
@@ -23,7 +22,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onTryGame,
   onStartRace,
   onOpenGarage,
-  onOpenOnlineModal,
   onNavigateProfile,
 }) => {
   const { stats, currentUser } = useAuthStore();
@@ -252,18 +250,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <Wrench className="w-4 h-4 text-accent" />
             <span>GARAGE</span>
           </Button>
-
-          <button
-            onClick={() => {
-              audioEngine.playUiClick();
-              if (onOpenOnlineModal) onOpenOnlineModal();
-            }}
-            className="flex items-center gap-1.5 px-3 py-2.5 rounded-[4px] bg-surface-2 border border-border text-text-muted hover:text-text font-display uppercase tracking-widest text-xs font-semibold transition-all hover:border-accent/40"
-            title="Online Racing - Coming Soon"
-          >
-            <span>ONLINE</span>
-            <span className="text-[11px]">🔒</span>
-          </button>
         </div>
 
         {/* Minimal High-Signal Telemetry Footer */}

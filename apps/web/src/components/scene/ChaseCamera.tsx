@@ -23,50 +23,44 @@ export const ChaseCamera: React.FC<ChaseCameraProps> = ({
   isStalled,
 }) => {
   const { camera } = useThree();
-  const { screenShake, reducedMotion } = useSettingsStore();
+  const { reducedMotion } = useSettingsStore();
 
   const currentCamPos = useRef(new THREE.Vector3(0, 2.5, -6));
   const currentLookAt = useRef(new THREE.Vector3(0, 1, 10));
 
   useFrame((_, delta) => {
     const persCam = camera as THREE.PerspectiveCamera;
-    const speed01 = Math.min(1.0, Math.max(0.0, speedKmh / 900));
+    const speed01 = Math.min(1.0, Math.max(0.0, (speedKmh - 60) / 240));
 
-    // Dynamic FOV
-    if (!reducedMotion) {
-      const targetFov = 52 + 14 * speed01;
-      persCam.fov += (targetFov - persCam.fov) * Math.min(1, delta * 3.0);
-      persCam.updateProjectionMatrix();
-    }
+    // Dynamic FOV: Subtle, cinematic widening (+5 deg max) without fish-eye warping
+    const targetFov = reducedMotion ? 52 : 52 + 5 * speed01;
+    persCam.fov += (targetFov - persCam.fov) * Math.min(1, delta * 5.0);
+    persCam.updateProjectionMatrix();
 
-    // Camera base offsets
-    const pullBack = (!reducedMotion ? 1.0 * speed01 : 0) - (isStalled ? 0.35 : 0);
-    const height = 2.2 - (speed01 * 0.3);
-
-    // Compute rear offset aligned with track tangent without allocations
+    // Normalized track tangent direction
     _tangent.copy(targetTangent).normalize();
 
+    // Camera follow parameters: stable, tightly bounded behind car
+    const pullBack = (!reducedMotion ? 0.5 * speed01 : 0) - (isStalled ? 0.2 : 0);
+    const camDist = 6.4 + pullBack;
+    const camHeight = 2.1;
+
     _desiredPos.copy(targetPosition)
-      .addScaledVector(_tangent, -(6.2 + pullBack))
-      .addScaledVector(_up, height);
+      .addScaledVector(_tangent, -camDist)
+      .addScaledVector(_up, camHeight);
 
-    // High speed road vibration
-    if (screenShake && !reducedMotion && speedKmh > 500) {
-      const vib = (Math.random() - 0.5) * 0.02 * speed01;
-      _desiredPos.x += vib;
-      _desiredPos.y += vib;
-    }
-
-    // Look-ahead point
-    const lookDist = 10.0 + speed01 * 6.0;
+    // Look-ahead target: smoothly looking ahead along track curvature
+    const lookDist = 11.0 + speed01 * 3.0;
     _desiredLookAt.copy(targetPosition)
       .addScaledVector(_tangent, lookDist)
-      .addScaledVector(_up, 0.8);
+      .addScaledVector(_up, 0.9);
 
-    // Spring smooth follow
-    const spring = Math.min(1.0, delta * 8.0);
-    currentCamPos.current.lerp(_desiredPos, spring);
-    currentLookAt.current.lerp(_desiredLookAt, spring * 1.2);
+    // Frame-rate independent exponential damping for rock-solid curve tracking
+    const posLerp = 1.0 - Math.exp(-18.0 * Math.min(0.05, delta));
+    const lookLerp = 1.0 - Math.exp(-22.0 * Math.min(0.05, delta));
+
+    currentCamPos.current.lerp(_desiredPos, posLerp);
+    currentLookAt.current.lerp(_desiredLookAt, lookLerp);
 
     persCam.position.copy(currentCamPos.current);
     persCam.lookAt(currentLookAt.current);

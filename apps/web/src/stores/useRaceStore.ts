@@ -366,13 +366,6 @@ export const useRaceStore = create<RaceStoreState>((set, get) => ({
         status: 'round_complete',
         roundResults: updatedRounds,
       });
-
-      // Quick automatic 1.8s transition to next round
-      setTimeout(() => {
-        if (get().status === 'round_complete') {
-          get().advanceToNextRound();
-        }
-      }, 1800);
     } else {
       // All 3 rounds complete -> Complete Match
       set({ roundResults: updatedRounds });

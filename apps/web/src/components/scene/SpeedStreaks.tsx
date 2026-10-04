@@ -10,7 +10,7 @@ export interface SpeedStreaksProps {
   speedKmh: number;
 }
 
-const STREAK_COUNT = 90;
+const STREAK_COUNT = 24;
 
 export const SpeedStreaks: React.FC<SpeedStreaksProps> = ({
   playerPos,
@@ -20,20 +20,20 @@ export const SpeedStreaks: React.FC<SpeedStreaksProps> = ({
   const { reducedMotion } = useSettingsStore();
   const instancedRef = useRef<THREE.InstancedMesh>(null);
 
-  // Precompute random offsets around the vehicle trajectory
+  // Precompute random offsets around the vehicle trajectory (outer edges only)
   const streakData = useMemo(() => {
     const data: { offset: THREE.Vector3; speedMult: number; length: number }[] = [];
     for (let i = 0; i < STREAK_COUNT; i++) {
-      // Cylindrical distribution around car (radius 2.5m to 7.0m, height -0.5m to 4.5m)
-      const angle = Math.random() * Math.PI * 2;
-      const radius = 2.2 + Math.random() * 5.5;
+      // Peripheral distribution around car (radius 4.2m to 9.0m, leaving center clean)
+      const angle = (i % 2 === 0 ? 0.3 : Math.PI - 0.3) + (Math.random() - 0.5) * 1.0;
+      const radius = 4.2 + Math.random() * 4.5;
       const x = Math.cos(angle) * radius;
-      const y = 0.5 + Math.random() * 3.5;
-      const z = (Math.random() - 0.5) * 35.0; // distributed along relative z
+      const y = 0.8 + Math.random() * 2.5;
+      const z = (Math.random() - 0.5) * 30.0;
       data.push({
         offset: new THREE.Vector3(x, y, z),
-        speedMult: 0.8 + Math.random() * 0.5,
-        length: 1.5 + Math.random() * 3.0,
+        speedMult: 0.8 + Math.random() * 0.4,
+        length: 1.5 + Math.random() * 2.0,
       });
     }
     return data;
@@ -45,13 +45,13 @@ export const SpeedStreaks: React.FC<SpeedStreaksProps> = ({
     if (!instancedRef.current || reducedMotion) return;
 
     const mesh = instancedRef.current;
-    if (speedKmh < 150) {
+    if (speedKmh < 180) {
       mesh.visible = false;
       return;
     }
     mesh.visible = true;
 
-    const speedNorm = Math.min(1.0, (speedKmh - 150) / 600);
+    const speedNorm = Math.min(1.0, (speedKmh - 180) / 130);
     const flowVelocity = (speedKmh * 1000) / 3600; // m/s
     const tangent = playerTangent.clone().normalize();
     const up = new THREE.Vector3(0, 1, 0);
@@ -68,14 +68,10 @@ export const SpeedStreaks: React.FC<SpeedStreaksProps> = ({
     for (let i = 0; i < STREAK_COUNT; i++) {
       const item = streakData[i];
       // Move streak relative to car backwards
-      item.offset.z -= flowVelocity * item.speedMult * delta * 0.45;
+      item.offset.z -= flowVelocity * item.speedMult * delta * 0.35;
       // Recycle if it flows behind the camera
-      if (item.offset.z < -12) {
-        item.offset.z = 22 + Math.random() * 10;
-        const angle = Math.random() * Math.PI * 2;
-        const radius = 2.2 + Math.random() * 5.5;
-        item.offset.x = Math.cos(angle) * radius;
-        item.offset.y = 0.5 + Math.random() * 3.5;
+      if (item.offset.z < -10) {
+        item.offset.z = 20 + Math.random() * 8;
       }
 
       // World position relative to player
@@ -88,8 +84,8 @@ export const SpeedStreaks: React.FC<SpeedStreaksProps> = ({
       dummy.position.copy(worldPos);
       dummy.rotation.copy(rotation);
       // Scale length by speed
-      const stretch = item.length * (1.0 + speedNorm * 3.0);
-      dummy.scale.set(0.04, 0.04, stretch);
+      const stretch = item.length * (1.0 + speedNorm * 2.0);
+      dummy.scale.set(0.025, 0.025, stretch);
       dummy.updateMatrix();
 
       mesh.setMatrixAt(i, dummy.matrix);
@@ -97,7 +93,7 @@ export const SpeedStreaks: React.FC<SpeedStreaksProps> = ({
 
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.material instanceof THREE.Material) {
-      mesh.material.opacity = 0.25 + speedNorm * 0.65;
+      mesh.material.opacity = 0.12 + speedNorm * 0.25;
     }
   });
 
