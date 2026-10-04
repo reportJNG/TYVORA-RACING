@@ -323,20 +323,31 @@ export const CarSelectScreen: React.FC<CarSelectScreenProps> = ({ onStartRace, o
                       selectCar(c.id);
                       setCustomPaintColor(null);
                     }}
-                    className={`px-3 py-1.5 rounded-[4px] text-left transition-all font-display uppercase tracking-wider border whitespace-nowrap ${
+                    className={`px-3 py-1.5 rounded-[4px] text-left transition-all font-display uppercase tracking-wider border whitespace-nowrap flex items-center gap-2.5 ${
                       isSelected
                         ? 'bg-accent/15 border-accent text-text font-bold shadow-[0_0_10px_rgba(255,85,28,0.25)]'
                         : 'bg-surface-2 border-border text-text-muted hover:text-text'
                     }`}
                   >
-                    <div className="flex items-center gap-1.5 text-xs">
+                    {c.spriteUrl ? (
+                      <div className="w-5 h-8 flex items-center justify-center shrink-0">
+                        <img
+                          src={c.spriteUrl}
+                          alt={c.name}
+                          className="max-h-8 max-w-5 object-contain"
+                          style={{ imageRendering: 'pixelated' }}
+                        />
+                      </div>
+                    ) : (
                       <div
-                        className="w-2 h-2 rounded-full"
+                        className="w-2 h-2 rounded-full shrink-0"
                         style={{ backgroundColor: c.primaryColor }}
                       />
-                      <span>{c.name}</span>
+                    )}
+                    <div>
+                      <div className="text-xs">{c.name}</div>
+                      <div className="text-[9px] text-text-faint">{c.category}</div>
                     </div>
-                    <div className="text-[9px] text-text-faint">{c.category}</div>
                   </button>
                 );
               })

@@ -41,7 +41,7 @@ export const ShowroomCanvas: React.FC<ShowroomCanvasProps> = ({
   return (
     <div className="w-full h-full relative cursor-grab active:cursor-grabbing select-none">
       <Canvas
-        camera={{ position: [0, 2.1, 5.6], fov: 44 }}
+        camera={{ position: [0, 5.8, 4.4], fov: 40 }}
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
         shadows
       >
@@ -97,8 +97,8 @@ export const ShowroomCanvas: React.FC<ShowroomCanvasProps> = ({
         <OrbitControls
           enableZoom={false}
           enablePan={false}
-          minPolarAngle={Math.PI / 4.2}
-          maxPolarAngle={Math.PI / 2.05}
+          minPolarAngle={Math.PI / 5}
+          maxPolarAngle={Math.PI / 2.3}
           autoRotate={false}
         />
       </Canvas>

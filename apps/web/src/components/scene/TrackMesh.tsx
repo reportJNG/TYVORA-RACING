@@ -210,6 +210,29 @@ export const TrackMesh: React.FC<TrackMeshProps> = ({ raceDistance, trackId = 'p
   const track = TRACKS_DATA[trackId] || TRACKS_DATA['pacific-coast'];
   const { curve } = useMemo(() => buildTrackSpline(raceDistance, trackId), [raceDistance, trackId]);
 
+  // Procedural Pixel Checkerboard Texture for Start and Finish Lines
+  const checkerTexture = useMemo(() => {
+    if (typeof document === 'undefined') return null;
+    const canvas = document.createElement('canvas');
+    canvas.width = 32;
+    canvas.height = 8;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    for (let y = 0; y < 8; y++) {
+      for (let x = 0; x < 32; x++) {
+        ctx.fillStyle = (x + y) % 2 === 0 ? '#FFFFFF' : '#0F172A';
+        ctx.fillRect(x, y, 1, 1);
+      }
+    }
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.magFilter = THREE.NearestFilter;
+    tex.minFilter = THREE.NearestFilter;
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(4, 1);
+    return tex;
+  }, []);
+
   // Generate ribbon road geometry
   const roadGeometry = useMemo(() => {
     const segments = Math.max(90, Math.ceil(raceDistance / 3.5));
@@ -654,9 +677,23 @@ export const TrackMesh: React.FC<TrackMeshProps> = ({ raceDistance, trackId = 'p
         </mesh>
         {/* Checkered Start Line Grid on Asphalt */}
         <mesh position={[0, 0.03, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[track.road.width * 0.9, 1.5]} />
-          <meshBasicMaterial color="#FFFFFF" transparent opacity={0.95} />
+          <planeGeometry args={[track.road.width * 0.95, 1.6]} />
+          {checkerTexture ? (
+            <meshBasicMaterial map={checkerTexture} transparent opacity={0.95} />
+          ) : (
+            <meshBasicMaterial color="#FFFFFF" transparent opacity={0.95} />
+          )}
         </mesh>
+
+        {/* Starting Grid Box Outlines (Lanes) */}
+        {[-3.0, 0, 3.0].map((laneOffset, i) => (
+          <group key={`start-box-${i}`} position={[laneOffset, 0.035, -2.5 - i * 1.8]}>
+            <mesh rotation={[-Math.PI / 2, 0, 0]}>
+              <planeGeometry args={[2.0, 3.8]} />
+              <meshBasicMaterial color="#FFFFFF" transparent opacity={0.15} />
+            </mesh>
+          </group>
+        ))}
       </group>
 
       {/* ======================================================== */}
@@ -680,8 +717,12 @@ export const TrackMesh: React.FC<TrackMeshProps> = ({ raceDistance, trackId = 'p
         </mesh>
         {/* Checkered Finish Carpet Decal */}
         <mesh position={[0, 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[track.road.width * 0.9, 3.2]} />
-          <meshBasicMaterial color="#DC2626" />
+          <planeGeometry args={[track.road.width * 0.95, 3.2]} />
+          {checkerTexture ? (
+            <meshBasicMaterial map={checkerTexture} />
+          ) : (
+            <meshBasicMaterial color="#DC2626" />
+          )}
         </mesh>
         {/* Finish Banner Board */}
         <mesh position={[0, 6.2, 0.85]}>
