@@ -1,0 +1,17 @@
+{
+  "name": "@typerace/sim",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Deterministic typing and car physics simulation engine for TypeRace",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.8"
+  }
+}
