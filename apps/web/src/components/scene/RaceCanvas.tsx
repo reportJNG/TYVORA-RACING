@@ -51,7 +51,7 @@ export const RaceCanvas: React.FC = React.memo(() => {
   return (
     <div className="absolute inset-0 w-full h-full pointer-events-none">
       <Canvas
-        camera={{ position: [0, 2.5, -6], fov: 55 }}
+        camera={{ position: [0, 14.5, -8], fov: 45 }}
         gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
         shadows
       >
