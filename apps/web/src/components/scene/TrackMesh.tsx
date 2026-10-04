@@ -510,6 +510,38 @@ export const TrackMesh: React.FC<TrackMeshProps> = ({ raceDistance, trackId = 'p
     return list;
   }, [curve, raceDistance, track.spline]);
 
+  // Intermediate Progression Gantries (25%, 50%, 75% milestones)
+  const progressionGantries = useMemo(() => {
+    const milestones = [
+      { prog: 0.25, bannerColor: '#0284C7' },
+      { prog: 0.50, bannerColor: '#10B981' },
+      { prog: 0.75, bannerColor: '#F97316' },
+    ];
+    return milestones.map((m) => {
+      const u = m.prog;
+      const pos = curve.getPointAt(u);
+      const tangent = curve.getTangentAt(u).normalize();
+      const rot = new THREE.Euler(0, Math.atan2(tangent.x, tangent.z), 0);
+      return { pos, rot, bannerColor: m.bannerColor };
+    });
+  }, [curve]);
+
+  // Finish Arena Grandstands & Stadium Light Towers (final 7% stretch)
+  const finishArena = useMemo(() => {
+    const list: { pos: THREE.Vector3; rot: THREE.Euler; isLeft: boolean }[] = [];
+    const points = [0.93, 0.96, 0.985];
+    for (const u of points) {
+      const pt = curve.getPointAt(u);
+      const tangent = curve.getTangentAt(u).normalize();
+      const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
+      const rot = new THREE.Euler(0, Math.atan2(tangent.x, tangent.z), 0);
+      const offsetDist = track.road.width * 0.5 + 7.0;
+      list.push({ pos: pt.clone().add(normal.clone().multiplyScalar(offsetDist)), rot, isLeft: true });
+      list.push({ pos: pt.clone().add(normal.clone().multiplyScalar(-offsetDist)), rot, isLeft: false });
+    }
+    return list;
+  }, [curve, track.road.width]);
+
   return (
     <group>
       {/* ======================================================== */}
@@ -695,6 +727,69 @@ export const TrackMesh: React.FC<TrackMeshProps> = ({ raceDistance, trackId = 'p
           </group>
         ))}
       </group>
+
+      {/* ======================================================== */}
+      {/* PROGRESSION MILESTONE GANTRIES (25%, 50%, 75%) */}
+      {/* ======================================================== */}
+      {progressionGantries.map((g, idx) => (
+        <group key={`prog-gantry-${idx}`} position={g.pos} rotation={g.rot}>
+          {/* Overhead Truss Beam */}
+          <mesh position={[0, 6.0, 0]} castShadow>
+            <boxGeometry args={[18, 0.9, 0.9]} />
+            <meshStandardMaterial color="#1E293B" metalness={0.8} roughness={0.25} />
+          </mesh>
+          {/* Support Columns */}
+          <mesh position={[-8.8, 3.0, 0]}>
+            <boxGeometry args={[0.7, 6.0, 0.7]} />
+            <meshStandardMaterial color="#1E293B" metalness={0.8} />
+          </mesh>
+          <mesh position={[8.8, 3.0, 0]}>
+            <boxGeometry args={[0.7, 6.0, 0.7]} />
+            <meshStandardMaterial color="#1E293B" metalness={0.8} />
+          </mesh>
+          {/* Colored Milestone Banner Board */}
+          <mesh position={[0, 6.0, 0.5]}>
+            <planeGeometry args={[11, 0.8]} />
+            <meshBasicMaterial color={g.bannerColor} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* ======================================================== */}
+      {/* FINISH ARENA GRANDSTANDS & STADIUM LIGHT TOWERS */}
+      {/* ======================================================== */}
+      {finishArena.map((item, idx) => (
+        <group key={`arena-stand-${idx}`} position={item.pos} rotation={item.rot}>
+          {/* Spectator Grandstand Seating Tier */}
+          <mesh position={[0, 1.4, 0]} castShadow receiveShadow>
+            <boxGeometry args={[5.5, 2.8, 14]} />
+            <meshStandardMaterial color="#334155" roughness={0.85} />
+          </mesh>
+          {/* Canopy Roof Frame */}
+          <mesh position={[0, 4.4, 0]} castShadow>
+            <boxGeometry args={[6.2, 0.25, 14.5]} />
+            <meshStandardMaterial color="#F8FAFC" metalness={0.5} roughness={0.3} />
+          </mesh>
+          {/* Grandstand Roof Support Pillars */}
+          <mesh position={[-2.4, 2.9, -6.5]}>
+            <cylinderGeometry args={[0.08, 0.08, 3.0, 6]} />
+            <meshStandardMaterial color="#94A3B8" metalness={0.8} />
+          </mesh>
+          <mesh position={[-2.4, 2.9, 6.5]}>
+            <cylinderGeometry args={[0.08, 0.08, 3.0, 6]} />
+            <meshStandardMaterial color="#94A3B8" metalness={0.8} />
+          </mesh>
+          {/* Stadium Floodlight Tower */}
+          <mesh position={[3.0, 5.5, 0]}>
+            <cylinderGeometry args={[0.15, 0.3, 11, 8]} />
+            <meshStandardMaterial color="#64748B" metalness={0.9} />
+          </mesh>
+          <mesh position={[3.0, 11.2, 0]}>
+            <boxGeometry args={[0.8, 1.4, 3.2]} />
+            <meshBasicMaterial color="#FEF08A" />
+          </mesh>
+        </group>
+      ))}
 
       {/* ======================================================== */}
       {/* FINISH LINE VICTORY ARCH */}

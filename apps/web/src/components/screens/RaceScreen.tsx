@@ -1,5 +1,5 @@
 // apps/web/src/components/screens/RaceScreen.tsx
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useRaceStore } from '../../stores/useRaceStore.js';
 import { RaceCanvas } from '../scene/RaceCanvas.js';
 import { TypingHUD } from '../race/TypingHUD.js';
@@ -22,6 +22,8 @@ export const RaceScreen: React.FC<RaceScreenProps> = ({ onBackToCarSelect, onHom
   const prepareRace = useRaceStore((state) => state.prepareRace);
   const startCountdown = useRaceStore((state) => state.startCountdown);
 
+  const [overtakeNotice, setOvertakeNotice] = useState<string | null>(null);
+  const prevRankRef = useRef<number>(3);
   const lastFrameTime = useRef<number>(performance.now());
   const animFrameId = useRef<number | null>(null);
 
@@ -79,6 +81,18 @@ export const RaceScreen: React.FC<RaceScreenProps> = ({ onBackToCarSelect, onHom
   }
   const posLabel = rank === 1 ? '1ST' : rank === 2 ? '2ND' : '3RD';
 
+  // Overtake feedback notification
+  useEffect(() => {
+    if (status === 'racing' && playerD > 5) {
+      if (rank < prevRankRef.current) {
+        setOvertakeNotice(rank === 1 ? 'LEAD TAKEN // 1ST' : 'GHOST OVERTAKEN // +1 POS');
+        const timer = setTimeout(() => setOvertakeNotice(null), 1600);
+        return () => clearTimeout(timer);
+      }
+    }
+    prevRankRef.current = rank;
+  }, [rank, status, playerD]);
+
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-bg select-none">
       {/* TOP EDGE HAIRLINE PROGRESS RAIL */}
@@ -88,6 +102,16 @@ export const RaceScreen: React.FC<RaceScreenProps> = ({ onBackToCarSelect, onHom
 
       {/* 3D WEBGL RACING CANVAS (Hero Viewport) */}
       <RaceCanvas />
+
+      {/* OVERTAKE FLASH NOTIFICATION */}
+      {overtakeNotice && (
+        <div className="absolute top-12 left-1/2 -translate-x-1/2 z-30 pointer-events-none animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="px-3.5 py-1 rounded-full bg-black/60 border border-accent/60 backdrop-blur-md text-[10px] font-display font-bold uppercase tracking-widest text-accent shadow-[0_0_16px_rgba(255,85,28,0.35)] flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-accent animate-ping" />
+            <span>{overtakeNotice}</span>
+          </div>
+        </div>
+      )}
 
       {/* MINIMAL TOP BAR: CLEAN ESC & POSITION / ROUND STATUS */}
       <div className="absolute top-3 inset-x-0 z-20 flex items-center justify-between px-5 pointer-events-none">

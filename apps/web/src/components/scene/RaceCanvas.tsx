@@ -4,7 +4,8 @@ import { Canvas } from '@react-three/fiber';
 import * as THREE from 'three';
 import { TrackMesh, buildTrackSpline } from './TrackMesh.js';
 import { Vehicle3D } from './Vehicle3D.js';
-import { ChaseCamera } from './ChaseCamera.js';
+import { GhostVehicle3D } from './GhostVehicle3D.js';
+import { PlayerFollowCamera } from './PlayerFollowCamera.js';
 import { SpeedStreaks } from './SpeedStreaks.js';
 import { useRaceStore } from '../../stores/useRaceStore.js';
 import { useTypingStore } from '../../stores/useTypingStore.js';
@@ -22,28 +23,34 @@ export const RaceCanvas: React.FC = React.memo(() => {
   const track = TRACKS_DATA[selectedTrackId] || TRACKS_DATA['pacific-coast'];
   const trackSpline = useMemo(() => buildTrackSpline(raceDistance, selectedTrackId), [raceDistance, selectedTrackId]);
 
-  // Compute 3D position and orientation for player car (Lane B = 0 offset)
+  // Compute 3D position and orientation for player car (Lane B = center offset 0)
   const playerPos = trackSpline.getPointAtDistance(playerSim.d);
   const playerTangent = trackSpline.getTangentAtDistance(playerSim.d).normalize();
   const playerRotY = Math.atan2(playerTangent.x, playerTangent.z);
 
-  // Compute AI 1 (Rival - Lane A = -3.6 offset)
+  // Compute Ghost 1 (Rival - Lane A = -3.4 offset, accurately following its own spline section)
   const opp1 = opponents[0];
-  const opp1Pos = opp1
-    ? trackSpline.getPointAtDistance(opp1.racer.d).clone().add(
-        new THREE.Vector3().crossVectors(playerTangent, new THREE.Vector3(0, 1, 0)).multiplyScalar(3.6)
-      )
-    : new THREE.Vector3(0, 0, 0);
-  const opp1RotY = playerRotY;
+  const opp1Pos = useMemo(() => {
+    if (!opp1) return new THREE.Vector3();
+    const pt = trackSpline.getPointAtDistance(opp1.racer.d);
+    const tangent = trackSpline.getTangentAtDistance(opp1.racer.d).normalize();
+    const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
+    return pt.add(normal.multiplyScalar(3.4));
+  }, [opp1?.racer.d, trackSpline]);
+  const opp1Tangent = opp1 ? trackSpline.getTangentAtDistance(opp1.racer.d).normalize() : playerTangent;
+  const opp1RotY = Math.atan2(opp1Tangent.x, opp1Tangent.z);
 
-  // Compute AI 2 (Pacer - Lane C = +3.6 offset)
+  // Compute Ghost 2 (Pacer - Lane C = +3.4 offset, accurately following its own spline section)
   const opp2 = opponents[1];
-  const opp2Pos = opp2
-    ? trackSpline.getPointAtDistance(opp2.racer.d).clone().add(
-        new THREE.Vector3().crossVectors(playerTangent, new THREE.Vector3(0, 1, 0)).multiplyScalar(-3.6)
-      )
-    : new THREE.Vector3(0, 0, 0);
-  const opp2RotY = playerRotY;
+  const opp2Pos = useMemo(() => {
+    if (!opp2) return new THREE.Vector3();
+    const pt = trackSpline.getPointAtDistance(opp2.racer.d);
+    const tangent = trackSpline.getTangentAtDistance(opp2.racer.d).normalize();
+    const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
+    return pt.add(normal.multiplyScalar(-3.4));
+  }, [opp2?.racer.d, trackSpline]);
+  const opp2Tangent = opp2 ? trackSpline.getTangentAtDistance(opp2.racer.d).normalize() : playerTangent;
+  const opp2RotY = Math.atan2(opp2Tangent.x, opp2Tangent.z);
 
   const playerSpeedKmh = playerSim.v * 3.6;
   const isPlayerStalled = playerSim.stallUntilMs > Date.now();
@@ -51,15 +58,15 @@ export const RaceCanvas: React.FC = React.memo(() => {
   return (
     <div className="absolute inset-0 w-full h-full pointer-events-none">
       <Canvas
-        camera={{ position: [0, 14.5, -8], fov: 45 }}
+        camera={{ position: [0, 14.5, -8], fov: 43 }}
         gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
         shadows
       >
-        {/* CLEAN ATMOSPHERIC SKY & HORIZON FOG */}
+        {/* ATMOSPHERIC SKY & HORIZON FOG */}
         <color attach="background" args={[track.lighting.skyTop]} />
         <fogExp2 attach="fog" args={[track.lighting.fogColor, track.lighting.fogDensity]} />
 
-        {/* BRIGHT REALISTIC LIGHTING SYSTEM */}
+        {/* CINEMATIC LIGHTING SYSTEM */}
         <ambientLight intensity={track.lighting.ambientIntensity} color={track.lighting.ambientColor} />
         <directionalLight
           position={track.lighting.sunPosition}
@@ -79,17 +86,17 @@ export const RaceCanvas: React.FC = React.memo(() => {
           args={[track.lighting.hemiSky, track.lighting.hemiGround, track.lighting.hemiIntensity]}
         />
 
-        {/* SCENIC CLEAN RACETRACK & 3D ENVIRONMENT */}
+        {/* SCENIC CONTINUOUS RACETRACK & 3D WORLD */}
         <TrackMesh raceDistance={raceDistance} trackId={selectedTrackId} />
 
-        {/* SPEED PARTICLES & CLEAN WIND TRAILS */}
+        {/* SPEED PARTICLES & AERODYNAMIC WIND TRAILS */}
         <SpeedStreaks
           playerPos={playerPos}
           playerTangent={playerTangent}
           speedKmh={playerSpeedKmh}
         />
 
-        {/* PLAYER CLEAN VEHICLE (Lane B) */}
+        {/* SOLE PHYSICAL PLAYER CAR (Lane B) */}
         <Vehicle3D
           carId={selectedCarId}
           colorOverride={customPaintColor || undefined}
@@ -100,28 +107,34 @@ export const RaceCanvas: React.FC = React.memo(() => {
           rotation={[0, playerRotY, 0]}
         />
 
-        {/* AI RIVAL VEHICLE (Lane A) */}
+        {/* GHOST RIVAL RACER (Crimson Spectral Trail, Lane A) */}
         {opp1 && (
-          <Vehicle3D
+          <GhostVehicle3D
             carId={opp1.car.id}
+            role="rival"
             speedKmh={opp1.racer.v * 3.6}
             position={[opp1Pos.x, opp1Pos.y, opp1Pos.z]}
             rotation={[0, opp1RotY, 0]}
+            playerDistance={playerSim.d}
+            ghostDistance={opp1.racer.d}
           />
         )}
 
-        {/* AI PACER VEHICLE (Lane C) */}
+        {/* GHOST PACER RACER (Electric Cyan Trail, Lane C) */}
         {opp2 && (
-          <Vehicle3D
+          <GhostVehicle3D
             carId={opp2.car.id}
+            role="pacer"
             speedKmh={opp2.racer.v * 3.6}
             position={[opp2Pos.x, opp2Pos.y, opp2Pos.z]}
             rotation={[0, opp2RotY, 0]}
+            playerDistance={playerSim.d}
+            ghostDistance={opp2.racer.d}
           />
         )}
 
-        {/* SMOOTH CHASE CAMERA */}
-        <ChaseCamera
+        {/* ADAPTIVE SMOOTH PLAYER-FOLLOW CAMERA */}
+        <PlayerFollowCamera
           targetPosition={playerPos}
           targetTangent={playerTangent}
           speedKmh={playerSpeedKmh}
