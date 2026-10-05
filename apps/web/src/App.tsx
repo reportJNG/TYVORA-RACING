@@ -1,3 +1,4 @@
+// apps/web/src/App.tsx
 import React, { useState, useEffect } from 'react';
 import { useSettingsStore } from './stores/useSettingsStore.js';
 import { useAuthStore } from './stores/useAuthStore.js';
@@ -6,9 +7,8 @@ import { audioEngine } from './audio/AudioEngine.js';
 import { Header } from './components/layout/Header.js';
 import { Footer } from './components/layout/Footer.js';
 
-import { LandingScreen } from './components/screens/LandingScreen.js';
 import { HomeScreen } from './components/screens/HomeScreen.js';
-import { CarSelectScreen } from './components/screens/CarSelectScreen.js';
+import { LandingScreen } from './components/screens/LandingScreen.js';
 import { RaceScreen } from './components/screens/RaceScreen.js';
 import { LeaderboardScreen } from './components/screens/LeaderboardScreen.js';
 import { ProfileScreen } from './components/screens/ProfileScreen.js';
@@ -19,9 +19,8 @@ import { OnlineModal } from './components/screens/OnlineModal.js';
 import { LegalModal, LegalTab } from './components/screens/LegalModal.js';
 
 export type ScreenType =
-  | 'landing'
   | 'home'
-  | 'car-select'
+  | 'landing'
   | 'race'
   | 'leaderboard'
   | 'profile'
@@ -31,7 +30,23 @@ export const App: React.FC = () => {
   const { theme, reducedMotion, largeText } = useSettingsStore();
   const { currentUser } = useAuthStore();
 
-  const [currentScreen, setCurrentScreen] = useState<ScreenType>('home');
+  const [currentScreen, setCurrentScreen] = useState<ScreenType>(() => {
+    if (typeof window !== 'undefined' && window.location?.search) {
+      const params = new URLSearchParams(window.location.search);
+      const s = params.get('screen');
+      if (
+        s === 'race' ||
+        s === 'leaderboard' ||
+        s === 'profile' ||
+        s === 'settings' ||
+        s === 'landing'
+      ) {
+        return s as ScreenType;
+      }
+    }
+    return 'home';
+  });
+
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalTab, setAuthModalTab] = useState<'signin' | 'signup'>('signin');
   const [onlineModalOpen, setOnlineModalOpen] = useState(false);
@@ -76,7 +91,7 @@ export const App: React.FC = () => {
     setLegalModalOpen(true);
   };
 
-  const isRaceScreen = currentScreen === 'race';
+  const isRaceActive = currentScreen === 'race';
 
   return (
     <div
@@ -84,8 +99,8 @@ export const App: React.FC = () => {
         largeText ? 'text-lg' : 'text-base'
       } ${reducedMotion ? 'motion-reduce' : ''}`}
     >
-      {/* Top Header - hidden during race to eliminate HUD distractions */}
-      {!isRaceScreen && (
+      {/* Top Header - hidden during active race view */}
+      {!isRaceActive && (
         <Header
           currentScreen={currentScreen}
           onNavigate={(screen) => setCurrentScreen(screen as ScreenType)}
@@ -96,18 +111,10 @@ export const App: React.FC = () => {
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col relative overflow-hidden">
-        {currentScreen === 'landing' && (
-          <LandingScreen
-            onPlay={() => setCurrentScreen('car-select')}
-            onLogin={() => openAuth('signin')}
-          />
-        )}
-
         {currentScreen === 'home' && (
           <HomeScreen
             onStartRace={() => setCurrentScreen('race')}
-            onOpenGarage={() => setCurrentScreen('car-select')}
-            onTryGame={() => setCurrentScreen('race')}
+            onNavigateLeaderboard={() => setCurrentScreen('leaderboard')}
             onNavigateProfile={() => {
               if (currentUser) {
                 setCurrentScreen('profile');
@@ -115,20 +122,22 @@ export const App: React.FC = () => {
                 openAuth('signin');
               }
             }}
+            onOpenAuthModal={() => openAuth('signin')}
           />
         )}
 
-        {currentScreen === 'car-select' && (
-          <CarSelectScreen
-            onBack={() => setCurrentScreen('home')}
-            onStartRace={() => setCurrentScreen('race')}
+        {currentScreen === 'landing' && (
+          <LandingScreen
+            onPlay={() => setCurrentScreen('race')}
+            onLogin={() => openAuth('signin')}
           />
         )}
 
         {currentScreen === 'race' && (
           <RaceScreen
-            onBackToCarSelect={() => setCurrentScreen('car-select')}
             onHome={() => setCurrentScreen('home')}
+            onLeaderboard={() => setCurrentScreen('leaderboard')}
+            onOpenOnlineModal={() => setOnlineModalOpen(true)}
           />
         )}
 
@@ -145,7 +154,7 @@ export const App: React.FC = () => {
       </main>
 
       {/* Bottom Footer - hidden during race */}
-      {!isRaceScreen && (
+      {!isRaceActive && (
         <Footer
           currentScreen={currentScreen}
           onOpenLegal={(tab) => openLegal(tab)}

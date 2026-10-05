@@ -26,21 +26,21 @@ export const Button: React.FC<ButtonProps> = ({
   };
 
   const baseStyles =
-    'relative inline-flex items-center justify-center font-display uppercase tracking-widest font-bold transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring select-none active:translate-y-[1px] disabled:opacity-40 disabled:pointer-events-none rounded-[4px] cursor-pointer';
+    'relative inline-flex items-center justify-center font-sans font-semibold text-sm transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring select-none active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none rounded-xl cursor-pointer';
 
   const sizeStyles = {
-    sm: 'h-8 px-3.5 text-xs tracking-wider',
-    md: 'h-11 px-5 text-sm',
-    lg: 'h-13 px-7 text-base tracking-widest',
+    sm: 'h-8 px-3.5 text-xs',
+    md: 'h-10 px-5 text-sm',
+    lg: 'h-12 px-7 text-base',
   };
 
   const variantStyles = {
     primary:
-      'bg-accent hover:bg-accent-hover text-accent-contrast shadow-[0_2px_12px_rgba(255,85,28,0.3)] hover:shadow-[0_4px_20px_rgba(255,85,28,0.45)]',
+      'bg-accent hover:bg-accent-hover text-white shadow-md shadow-accent/25 hover:shadow-accent/40 hover:scale-[1.01]',
     secondary:
-      'bg-surface-2 hover:bg-surface border border-border-strong text-text hover:border-accent/40',
+      'bg-surface-2/90 hover:bg-surface-2 border border-border text-text hover:border-accent/40',
     outline:
-      'bg-transparent hover:bg-surface-2/80 border border-border-strong text-text hover:border-text-muted',
+      'bg-transparent hover:bg-surface-2 border border-border text-text hover:border-border-strong',
     ghost:
       'bg-transparent hover:bg-surface-2 text-text-muted hover:text-text',
     locked:

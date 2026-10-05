@@ -1,7 +1,8 @@
 // apps/web/src/stores/useAuthStore.ts
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { SEED_LEADERBOARD, LeaderboardRacer } from '../data/mockLeaderboard.js';
+import { sqliteService, DbLeaderboardEntry } from '../db/sqlite.js';
+import { CarVisualConfig } from '../data/cars.js';
+import { LeaderboardRacer } from '../data/mockLeaderboard.js';
 
 export interface RaceHistoryItem {
   id: string;
@@ -14,12 +15,14 @@ export interface RaceHistoryItem {
   carId: string;
   difficulty: string;
   counted: boolean;
+  pointsEarned?: number;
 }
 
 export interface UserProfile {
   id: string;
   username: string;
   email: string;
+  points: number;
   createdAt: string;
   memberSince: string;
 }
@@ -41,14 +44,20 @@ export interface CareerStats {
   recentAccuracy: number[];
   carUsage: Record<string, number>;
   history: RaceHistoryItem[];
+  totalPoints: number;
 }
 
 export interface AuthState {
   currentUser: UserProfile | null;
   stats: CareerStats;
   leaderboard: LeaderboardRacer[];
+  unlockedCars: string[];
   isAuthenticated: boolean;
+  isDbReady: boolean;
+  newlyUnlockedCar: CarVisualConfig | null;
 
+  initDb: () => Promise<void>;
+  refreshFromDb: () => void;
   login: (identifier: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signup: (username: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
@@ -62,7 +71,15 @@ export interface AuthState {
     carId: string;
     difficulty: string;
     counted: boolean;
-  }) => { newBests: string[] };
+  }) => { newBests: string[]; pointsEarned: number; newlyUnlockedCars: CarVisualConfig[] };
+  clearUnlockNotification: () => void;
+
+  // Data persistence & backup actions
+  downloadDatabaseFile: () => void;
+  importDatabaseFile: (bytes: Uint8Array) => Promise<void>;
+  downloadJsonBackup: () => void;
+  importJsonBackup: (jsonStr: string) => Promise<void>;
+  resetDatabase: () => Promise<void>;
 }
 
 const DEFAULT_STATS: CareerStats = {
@@ -77,242 +94,262 @@ const DEFAULT_STATS: CareerStats = {
   bestTimeSeconds: 0.0,
   currentStreak: 0,
   longestStreak: 0,
-  favoriteCarId: 'meridian-gt',
+  favoriteCarId: 'scrapper-rust',
   recentWpm: [],
   recentAccuracy: [],
   carUsage: {},
   history: [],
+  totalPoints: 0,
 };
 
-// Default starter user so players can race immediately
 const DEFAULT_USER: UserProfile = {
-  id: 'guest-001',
+  id: 'user-speedster',
   username: 'Speedster',
-  email: 'racer@typerace.io',
+  email: 'speedster@tyvora.racing',
+  points: 0,
   createdAt: new Date().toISOString(),
   memberSince: 'Oct 2026',
 };
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set, get) => ({
-      currentUser: DEFAULT_USER,
-      stats: DEFAULT_STATS,
-      leaderboard: SEED_LEADERBOARD,
-      isAuthenticated: true,
+function mapDbLeaderboard(entries: DbLeaderboardEntry[]): LeaderboardRacer[] {
+  return entries.map((e) => ({
+    rank: e.rank,
+    userId: e.user_id,
+    username: e.username,
+    avatarSeed: e.avatar_seed,
+    wins: e.wins,
+    losses: e.losses,
+    winRate: e.win_rate,
+    bestWpm: e.best_wpm,
+    bestTimeSeconds: e.best_time_seconds,
+    favoriteCarId: e.favorite_car_id,
+    memberSince: 'Oct 2026',
+    totalPoints: e.total_points,
+  }));
+}
 
-      login: async (identifier, password) => {
-        if (!identifier.trim() || !password.trim()) {
-          return { success: false, error: 'Please enter your username/email and password.' };
-        }
-        if (password.length < 4) {
-          return { success: false, error: 'Incorrect username/email or password.' };
-        }
+export const useAuthStore = create<AuthState>((set, get) => {
+  // Trigger SQLite initialization in the background immediately
+  sqliteService.init().then(() => {
+    get().refreshFromDb();
+    set({ isDbReady: true });
+  }).catch((err) => {
+    console.error('[AuthStore] SQLite init error:', err);
+  });
 
-        const username = identifier.includes('@') ? identifier.split('@')[0] : identifier;
-        const user: UserProfile = {
-          id: 'user-' + Math.random().toString(36).substring(2, 9),
-          username: username.charAt(0).toUpperCase() + username.slice(1),
-          email: identifier.includes('@') ? identifier : `${username.toLowerCase()}@typerace.io`,
-          createdAt: new Date().toISOString(),
-          memberSince: 'Oct 2026',
-        };
+  return {
+    currentUser: DEFAULT_USER,
+    stats: DEFAULT_STATS,
+    leaderboard: [],
+    unlockedCars: ['scrapper-rust'],
+    isAuthenticated: true,
+    isDbReady: false,
+    newlyUnlockedCar: null,
 
-        set({
-          currentUser: user,
-          isAuthenticated: true,
-        });
+    initDb: async () => {
+      await sqliteService.init();
+      get().refreshFromDb();
+      set({ isDbReady: true });
+    },
 
-        return { success: true };
-      },
+    refreshFromDb: () => {
+      const current = get().currentUser;
+      const lb = sqliteService.getLeaderboard();
+      const mappedLb = mapDbLeaderboard(lb);
 
-      signup: async (username, email, password) => {
-        if (!username.trim() || username.length < 3 || username.length > 16) {
-          return { success: false, error: 'Username must be 3 to 16 characters.' };
-        }
-        if (!email.trim() || !email.includes('@')) {
-          return { success: false, error: 'Please enter a valid email address.' };
-        }
-        if (password.length < 8) {
-          return { success: false, error: 'Password must be at least 8 characters.' };
-        }
+      if (current) {
+        const dbUser = sqliteService.getUserById(current.id);
+        const userStats = sqliteService.getUserStats(current.id);
+        const unlocked = sqliteService.getUnlockedCarIds(current.id);
+        const rawHistory = sqliteService.getUserRaceHistory(current.id, 20);
 
-        const user: UserProfile = {
-          id: 'user-' + Math.random().toString(36).substring(2, 9),
-          username: username.trim(),
-          email: email.trim().toLowerCase(),
-          createdAt: new Date().toISOString(),
-          memberSince: 'Oct 2026',
-        };
-
-        set({
-          currentUser: user,
-          isAuthenticated: true,
-          stats: DEFAULT_STATS,
-        });
-
-        return { success: true };
-      },
-
-      logout: () => {
-        set({
-          currentUser: null,
-          isAuthenticated: false,
-        });
-      },
-
-      deleteAccount: () => {
-        set({
-          currentUser: null,
-          isAuthenticated: false,
-          stats: DEFAULT_STATS,
-        });
-      },
-
-      recordRaceResult: (race) => {
-        const current = get().stats;
-        const newBests: string[] = [];
-
-        const totalRaces = current.totalRaces + 1;
-        let wins = current.wins;
-        let losses = current.losses;
-        let currentStreak = current.currentStreak;
-        let longestStreak = current.longestStreak;
-        let bestTimeSeconds = current.bestTimeSeconds;
-
-        if (race.counted) {
-          if (race.isWin) {
-            wins += 1;
-            currentStreak += 1;
-            if (currentStreak > longestStreak) {
-              longestStreak = currentStreak;
-            }
-            if (bestTimeSeconds === 0 || race.timeSeconds < bestTimeSeconds) {
-              bestTimeSeconds = race.timeSeconds;
-              newBests.push('time');
-            }
-          } else {
-            losses += 1;
-            currentStreak = 0;
-          }
-        }
-
-        const totalCounted = wins + losses;
-        const winRate = totalCounted > 0 ? Number(((wins / totalCounted) * 100).toFixed(1)) : 0;
-
-        let bestWpm = current.bestWpm;
-        if (race.wpm > bestWpm) {
-          bestWpm = race.wpm;
-          newBests.push('wpm');
-        }
-
-        let bestAccuracy = current.bestAccuracy;
-        if (race.accuracy > bestAccuracy) {
-          bestAccuracy = race.accuracy;
-          newBests.push('accuracy');
-        }
-
-        // Rolling averages
-        const recentWpm = [...current.recentWpm, race.wpm].slice(-50);
-        const avgWpm = Number(
-          (recentWpm.reduce((acc, v) => acc + v, 0) / recentWpm.length).toFixed(1)
-        );
-
-        const recentAccuracy = [...current.recentAccuracy, race.accuracy].slice(-50);
-        const avgAccuracy = Number(
-          (recentAccuracy.reduce((acc, v) => acc + v, 0) / recentAccuracy.length).toFixed(1)
-        );
-
-        // Car usage count
-        const carUsage = { ...current.carUsage };
-        carUsage[race.carId] = (carUsage[race.carId] || 0) + 1;
-        let favoriteCarId = current.favoriteCarId;
-        let maxUsage = 0;
-        for (const [cId, count] of Object.entries(carUsage)) {
-          if (count > maxUsage) {
-            maxUsage = count;
-            favoriteCarId = cId;
-          }
-        }
-
-        const newHistoryItem: RaceHistoryItem = {
-          id: 'race-' + Date.now(),
-          timestamp: new Date().toISOString(),
-          isWin: race.isWin,
-          timeSeconds: race.timeSeconds,
-          wpm: race.wpm,
-          accuracy: race.accuracy,
-          mistakes: race.mistakes,
-          carId: race.carId,
-          difficulty: race.difficulty,
-          counted: race.counted,
-        };
-
-        const updatedStats: CareerStats = {
-          totalRaces,
-          wins,
-          losses,
-          winRate,
-          bestWpm,
-          avgWpm,
-          bestAccuracy,
-          avgAccuracy,
-          bestTimeSeconds,
-          currentStreak,
-          longestStreak,
-          favoriteCarId,
-          recentWpm,
-          recentAccuracy,
-          carUsage,
-          history: [newHistoryItem, ...current.history].slice(0, 20),
-        };
-
-        // Update leaderboard with user's new standings
-        const user = get().currentUser;
-        let updatedLeaderboard = [...get().leaderboard];
-        if (user && race.counted) {
-          const existingIdx = updatedLeaderboard.findIndex((r) => r.userId === user.id);
-          const racerEntry: LeaderboardRacer = {
-            rank: 0,
-            userId: user.id,
-            username: user.username,
-            avatarSeed: user.username.toLowerCase(),
-            wins,
-            losses,
-            winRate,
-            bestWpm,
-            bestTimeSeconds: bestTimeSeconds || race.timeSeconds,
-            favoriteCarId,
-            memberSince: user.memberSince,
-          };
-
-          if (existingIdx >= 0) {
-            updatedLeaderboard[existingIdx] = racerEntry;
-          } else {
-            updatedLeaderboard.push(racerEntry);
-          }
-
-          // Sort by wins DESC, winRate DESC, bestWpm DESC
-          updatedLeaderboard.sort((a, b) => {
-            if (b.wins !== a.wins) return b.wins - a.wins;
-            if (b.winRate !== a.winRate) return b.winRate - a.winRate;
-            return b.bestWpm - a.bestWpm;
-          });
-
-          // Reassign ranks
-          updatedLeaderboard = updatedLeaderboard.map((r, i) => ({ ...r, rank: i + 1 }));
-        }
+        const history: RaceHistoryItem[] = rawHistory.map((h) => ({
+          id: h.id,
+          timestamp: h.timestamp,
+          isWin: h.is_win,
+          timeSeconds: h.time_seconds,
+          wpm: h.wpm,
+          accuracy: h.accuracy,
+          mistakes: h.mistakes,
+          carId: h.car_id,
+          difficulty: h.difficulty,
+          counted: true,
+          pointsEarned: h.points_earned,
+        }));
 
         set({
-          stats: updatedStats,
-          leaderboard: updatedLeaderboard,
+          currentUser: dbUser
+            ? {
+                id: dbUser.id,
+                username: dbUser.username,
+                email: dbUser.email,
+                points: dbUser.points,
+                createdAt: dbUser.created_at,
+                memberSince: dbUser.member_since,
+              }
+            : current,
+          stats: {
+            ...userStats,
+            recentWpm: history.slice(0, 10).map((h) => h.wpm).reverse(),
+            recentAccuracy: history.slice(0, 10).map((h) => h.accuracy).reverse(),
+            carUsage: {},
+            history,
+          },
+          leaderboard: mappedLb,
+          unlockedCars: unlocked,
         });
+      } else {
+        set({ leaderboard: mappedLb });
+      }
+    },
 
-        return { newBests };
-      },
-    }),
-    {
-      name: 'typerace_auth_session',
-    }
-  )
-);
+    login: async (identifier, password) => {
+      if (!identifier.trim() || !password.trim()) {
+        return { success: false, error: 'Please enter your driver handle/email and password.' };
+      }
+
+      await sqliteService.init();
+      const res = sqliteService.login(identifier, password);
+      if (!res.success || !res.user) {
+        return { success: false, error: res.error || 'Authentication failed' };
+      }
+
+      const userProfile: UserProfile = {
+        id: res.user.id,
+        username: res.user.username,
+        email: res.user.email,
+        points: res.user.points,
+        createdAt: res.user.created_at,
+        memberSince: res.user.member_since,
+      };
+
+      set({
+        currentUser: userProfile,
+        isAuthenticated: true,
+      });
+
+      get().refreshFromDb();
+      return { success: true };
+    },
+
+    signup: async (username, email, password) => {
+      if (!username.trim() || username.length < 3 || username.length > 16) {
+        return { success: false, error: 'Driver handle must be 3 to 16 characters.' };
+      }
+      if (!email.trim() || !email.includes('@')) {
+        return { success: false, error: 'Please enter a valid email address.' };
+      }
+      if (password.length < 4) {
+        return { success: false, error: 'Password must be at least 4 characters.' };
+      }
+
+      await sqliteService.init();
+      const res = sqliteService.signup(username, email, password);
+      if (!res.success || !res.user) {
+        return { success: false, error: res.error || 'Registration failed' };
+      }
+
+      const userProfile: UserProfile = {
+        id: res.user.id,
+        username: res.user.username,
+        email: res.user.email,
+        points: res.user.points,
+        createdAt: res.user.created_at,
+        memberSince: res.user.member_since,
+      };
+
+      set({
+        currentUser: userProfile,
+        isAuthenticated: true,
+        stats: DEFAULT_STATS,
+        unlockedCars: ['scrapper-rust'],
+      });
+
+      get().refreshFromDb();
+      return { success: true };
+    },
+
+    logout: () => {
+      set({
+        currentUser: null,
+        isAuthenticated: false,
+        stats: DEFAULT_STATS,
+        unlockedCars: ['scrapper-rust'],
+      });
+    },
+
+    deleteAccount: () => {
+      const user = get().currentUser;
+      if (user) {
+        sqliteService.deleteUser(user.id);
+      }
+      set({
+        currentUser: null,
+        isAuthenticated: false,
+        stats: DEFAULT_STATS,
+        unlockedCars: ['scrapper-rust'],
+      });
+      get().refreshFromDb();
+    },
+
+    recordRaceResult: (race) => {
+      const user = get().currentUser || DEFAULT_USER;
+      const result = sqliteService.recordRace({
+        userId: user.id,
+        isWin: race.isWin,
+        timeSeconds: race.timeSeconds,
+        wpm: race.wpm,
+        accuracy: race.accuracy,
+        mistakes: race.mistakes,
+        carId: race.carId,
+        difficulty: race.difficulty,
+        counted: race.counted,
+      });
+
+      get().refreshFromDb();
+
+      if (result.newlyUnlockedCars.length > 0) {
+        set({ newlyUnlockedCar: result.newlyUnlockedCars[0] });
+      }
+
+      return {
+        newBests: result.newBests,
+        pointsEarned: result.pointsEarned,
+        newlyUnlockedCars: result.newlyUnlockedCars,
+      };
+    },
+
+    clearUnlockNotification: () => {
+      set({ newlyUnlockedCar: null });
+    },
+
+    downloadDatabaseFile: () => {
+      sqliteService.downloadDatabaseFile('tyvora-racing.sqlite');
+    },
+
+    importDatabaseFile: async (bytes: Uint8Array) => {
+      await sqliteService.importDatabaseBinary(bytes);
+      get().refreshFromDb();
+    },
+
+    downloadJsonBackup: () => {
+      sqliteService.downloadJsonBackup('tyvora-racing-backup.json');
+    },
+
+    importJsonBackup: async (jsonStr: string) => {
+      await sqliteService.importDataJson(jsonStr);
+      get().refreshFromDb();
+    },
+
+    resetDatabase: async () => {
+      await sqliteService.resetDatabase();
+      set({
+        currentUser: DEFAULT_USER,
+        stats: DEFAULT_STATS,
+        unlockedCars: ['scrapper-rust'],
+        isAuthenticated: true,
+      });
+      get().refreshFromDb();
+    },
+  };
+});

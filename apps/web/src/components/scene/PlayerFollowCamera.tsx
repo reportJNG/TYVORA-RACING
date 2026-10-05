@@ -32,24 +32,25 @@ export const PlayerFollowCamera: React.FC<PlayerFollowCameraProps> = ({
   const prevTangent = useRef(new THREE.Vector3(0, 0, 1));
   const isInitialized = useRef(false);
 
+  const stallEaseSmoothed = useRef(0);
+
   useFrame((_, delta) => {
     const persCam = camera as THREE.PerspectiveCamera;
     const clampedDelta = Math.min(0.05, Math.max(0.001, delta));
 
-    // Instantaneous acceleration calculation
+    // Instantaneous acceleration calculation with gentle low-pass filtering
     const rawAccel = (speedKmh - prevSpeed.current) / clampedDelta;
     prevSpeed.current = speedKmh;
 
-    // Smooth acceleration to avoid single-frame keystroke spikes
-    smoothedAccel.current += (rawAccel - smoothedAccel.current) * Math.min(1.0, clampedDelta * 8.0);
-    const accelNorm = Math.max(-1.0, Math.min(1.0, smoothedAccel.current / 25.0));
+    smoothedAccel.current += (rawAccel - smoothedAccel.current) * Math.min(1.0, clampedDelta * 4.0);
+    const accelNorm = Math.max(-1.0, Math.min(1.0, smoothedAccel.current / 40.0));
 
-    const speed01 = Math.min(1.0, Math.max(0.0, speedKmh / 220));
+    const speed01 = Math.min(1.0, Math.max(0.0, speedKmh / 240));
 
     // Dynamic FOV: subtle, cinematic 2.5D expansion at speed
     const baseFov = 43.0;
-    const targetFov = reducedMotion ? baseFov : baseFov + 5.5 * speed01;
-    persCam.fov += (targetFov - persCam.fov) * Math.min(1.0, clampedDelta * 6.0);
+    const targetFov = reducedMotion ? baseFov : baseFov + 4.5 * speed01;
+    persCam.fov += (targetFov - persCam.fov) * Math.min(1.0, clampedDelta * 5.0);
     persCam.updateProjectionMatrix();
 
     // Normalized track tangent direction
@@ -61,22 +62,25 @@ export const PlayerFollowCamera: React.FC<PlayerFollowCameraProps> = ({
     prevTangent.current.copy(_tangent);
     const isCornering = turnAngle > 0.002;
 
+    // Smooth stall ease transition
+    const targetStallEase = isStalled ? -0.35 : 0;
+    stallEaseSmoothed.current += (targetStallEase - stallEaseSmoothed.current) * Math.min(1.0, clampedDelta * 6.0);
+
     // Camera geometry relative to player:
-    // Physical momentum: acceleration pulls camera back slightly; stalling eases forward
-    const momentumPull = reducedMotion ? 0 : accelNorm * 0.45;
-    const stallEase = isStalled ? -0.4 : 0;
-    const camDist = 7.8 + speed01 * 0.8 + momentumPull + stallEase;
-    const camHeight = 14.2 + speed01 * 0.6;
+    // Stabilized cinematic chase camera tuned for low-poly supercar racing
+    const momentumPull = reducedMotion ? 0 : accelNorm * 0.22;
+    const camDist = 10.2 + speed01 * 1.4 + momentumPull + stallEaseSmoothed.current;
+    const camHeight = 7.8 + speed01 * 0.8;
 
     _desiredCamPos.copy(targetPosition)
       .addScaledVector(_tangent, -camDist)
       .addScaledVector(_up, camHeight);
 
     // Look-ahead target focused along the road ahead of the car
-    const lookDist = 5.2 + speed01 * 3.2;
+    const lookDist = 11.0 + speed01 * 3.5;
     _desiredLookAt.copy(targetPosition)
       .addScaledVector(_tangent, lookDist)
-      .addScaledVector(_up, 0.45);
+      .addScaledVector(_up, 0.8);
 
     // Initial snap on first frame to prevent flying across the world on race start
     if (!isInitialized.current) {
@@ -86,10 +90,10 @@ export const PlayerFollowCamera: React.FC<PlayerFollowCameraProps> = ({
     }
 
     // Adaptive smoothing damping rate:
-    // Straight driving: softer rate (~9.5) for buttery smoothness
-    // Cornering / High acceleration: firmer rate (~15.0) to eliminate camera lag or clipping
-    const posRate = isCornering ? 15.0 : 10.0 + speed01 * 2.0;
-    const lookRate = isCornering ? 16.0 : 11.0 + speed01 * 2.0;
+    // Straight driving: softer rate (~8.5) for buttery smoothness
+    // Cornering: firmer rate (~13.0) to eliminate camera lag or track clipping
+    const posRate = isCornering ? 13.0 : 8.5 + speed01 * 1.5;
+    const lookRate = isCornering ? 14.0 : 9.5 + speed01 * 1.5;
 
     const posLerp = 1.0 - Math.exp(-posRate * clampedDelta);
     const lookLerp = 1.0 - Math.exp(-lookRate * clampedDelta);

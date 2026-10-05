@@ -59,13 +59,13 @@ export const Modal: React.FC<ModalProps> = ({
       <div
         ref={modalRef}
         className={clsx(
-          'relative w-full bg-surface border border-border-strong rounded-m p-6 md:p-8 shadow-[0_24px_64px_rgba(0,0,0,0.6)] animate-scaleUp',
+          'relative w-full bg-surface/95 backdrop-blur-xl border border-border-strong rounded-2xl p-6 md:p-8 shadow-[0_24px_64px_rgba(0,0,0,0.6)] animate-scaleUp font-sans',
           maxWidthStyles[maxWidth]
         )}
       >
         <div className="flex items-center justify-between pb-4 mb-4 border-b border-border">
           {title ? (
-            <h2 className="text-xl font-display uppercase tracking-wider font-bold text-text">
+            <h2 className="text-xl font-bold tracking-tight text-text">
               {title}
             </h2>
           ) : (
@@ -76,10 +76,10 @@ export const Modal: React.FC<ModalProps> = ({
               audioEngine.playUiClick();
               onClose();
             }}
-            className="p-1 text-text-muted hover:text-text hover:bg-surface-2 rounded transition-colors"
+            className="p-1.5 text-text-muted hover:text-text hover:bg-surface-2 rounded-full transition-colors"
             aria-label="Close modal"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 

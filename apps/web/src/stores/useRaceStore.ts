@@ -65,6 +65,7 @@ export interface FinalRaceResult {
   difficulty: Difficulty;
   counted: boolean;
   rounds: RoundResult[];
+  pointsEarned?: number;
   opponents: {
     name: string;
     position: number;
@@ -90,6 +91,7 @@ export interface RaceStoreState {
   opponents: OpponentState[];
   lastResult: FinalRaceResult | null;
   newBests: string[];
+  pointsEarned: number;
 
   selectCar: (carId: string) => void;
   selectTrack: (trackId: string) => void;
@@ -118,7 +120,10 @@ export const useRaceStore = create<RaceStoreState>((set, get) => ({
   currentRound: 1,
   totalRounds: 3,
   roundResults: [],
-  selectedCarId: 'meridian-gt',
+  selectedCarId:
+    (typeof window !== 'undefined' && window.location?.search
+      ? new URLSearchParams(window.location.search).get('car')
+      : null) || 'scrapper-rust',
   selectedTrackId: 'pacific-coast',
   customPaintColor: null,
   difficulty: 'normal',
@@ -130,6 +135,7 @@ export const useRaceStore = create<RaceStoreState>((set, get) => ({
   opponents: [],
   lastResult: null,
   newBests: [],
+  pointsEarned: 0,
 
   selectCar: (carId: string) => set({ selectedCarId: carId }),
   selectTrack: (trackId: string) => set({ selectedTrackId: trackId }),
@@ -271,8 +277,8 @@ export const useRaceStore = create<RaceStoreState>((set, get) => ({
     // Step player car physics with dt and slipstream draft awareness
     stepCar(playerSim, typingState, playerCar, nextTimeMs, dt, raceDistance, leadOpponentDistance);
 
-    // Update audio engine pitch with current player speed
-    audioEngine.updateEngineRpm(playerSim.v * 3.6, playerSim.v > 5);
+    // Update audio engine pitch with current player speed & acceleration roar
+    audioEngine.updateEngineRpm(playerSim.v * 3.6, (playerSim.accel ?? 0) > 0.3);
 
     // Step AI opponents with rubber-band awareness of player position
     for (const opp of opponents) {
@@ -442,8 +448,8 @@ export const useRaceStore = create<RaceStoreState>((set, get) => ({
       })),
     };
 
-    // Commit to AuthStore career stats
-    const { newBests } = useAuthStore.getState().recordRaceResult({
+    // Commit to SQLite via AuthStore career stats
+    const { newBests, pointsEarned } = useAuthStore.getState().recordRaceResult({
       isWin: isMatchWin,
       timeSeconds: totalTimeSec,
       wpm: avgWpm,
@@ -454,10 +460,13 @@ export const useRaceStore = create<RaceStoreState>((set, get) => ({
       counted: difficulty !== 'easy',
     });
 
+    matchResult.pointsEarned = pointsEarned;
+
     set({
       status: 'results',
       lastResult: matchResult,
       newBests,
+      pointsEarned,
     });
   },
 

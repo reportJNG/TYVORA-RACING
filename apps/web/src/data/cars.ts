@@ -25,6 +25,7 @@ export const PAINT_PALETTE: PaintColor[] = [
 ];
 
 export interface CarVisualConfig extends CarSpec {
+  unlockPoints: number;
   primaryColor: string;
   secondaryColor: string;
   accentColor: string;
@@ -32,188 +33,311 @@ export interface CarVisualConfig extends CarSpec {
   bodyStyle: string;
   rimStyle: 'spoke5' | 'multi' | 'aero' | 'rally' | 'mesh';
   wingStyle: 'active' | 'gt' | 'ducktail' | 'super' | 'lip' | 'none';
+  modelUrl: string;
+  modelVariants?: Record<string, string>;
   spriteUrl: string;
-  spriteVariants: Record<string, string>;
+  spriteVariants?: Record<string, string>;
   width: number;
   length: number;
 }
 
 export const CARS_DATA: Record<string, CarVisualConfig> = {
+  'scrapper-rust': {
+    ...CAR_SPECS['scrapper-rust'],
+    unlockPoints: 0, // FREE STARTER TRASH CAR
+    primaryColor: '#795548', // Rusty brown
+    secondaryColor: '#4E342E',
+    accentColor: '#D84315',
+    tagline: 'Battered starter beater held together by duct tape and rust. Everyone starts here.',
+    bodyStyle: 'Low-Poly Scrap Beater',
+    rimStyle: 'rally',
+    wingStyle: 'lip',
+    modelUrl: '/assets/cars/models/carblack.glb',
+    modelVariants: {
+      rust: '/assets/cars/models/carblack.glb',
+      black: '/assets/cars/models/carblack.glb',
+      gray: '/assets/cars/models/carwhite.glb',
+    },
+    spriteUrl: '/assets/cars/thumbnails/carblack_isometric.png',
+    spriteVariants: {
+      rust: '/assets/cars/thumbnails/carblack_isometric.png',
+      black: '/assets/cars/thumbnails/carblack_isometric.png',
+      gray: '/assets/cars/thumbnails/carwhite_isometric.png',
+      default: '/assets/cars/thumbnails/carblack_isometric.png',
+    },
+    width: 2.04,
+    length: 4.22,
+  },
   'meridian-gt': {
     ...CAR_SPECS['meridian-gt'],
+    unlockPoints: 1400,
     primaryColor: '#16191E', // Midnight Black
-    secondaryColor: '#1A1D22',
-    accentColor: '#B87333', // Bronze brake calipers
-    tagline: 'Composed grand tourer at any speed.',
-    bodyStyle: 'Pixel GT Coupe',
-    rimStyle: 'spoke5',
+    secondaryColor: '#FFFFFF', // Dual White Racing Stripes
+    accentColor: '#FF551C', // Inferno Lower Decal
+    tagline: 'Stealth grand tourer with iconic double racing stripes.',
+    bodyStyle: 'Low-Poly Rally GT',
+    rimStyle: 'rally',
     wingStyle: 'ducktail',
-    spriteUrl: '/assets/cars/Coupe/coupe_midnight.png',
-    spriteVariants: {
-      blue: '/assets/cars/Coupe/coupe_blue.png',
-      red: '/assets/cars/Coupe/coupe_red.png',
-      green: '/assets/cars/Coupe/coupe_green.png',
-      default: '/assets/cars/Coupe/coupe_midnight.png',
+    modelUrl: '/assets/cars/models/carblack.glb',
+    modelVariants: {
+      black: '/assets/cars/models/carblack.glb',
+      blue: '/assets/cars/models/carblue.glb',
+      red: '/assets/cars/models/carred.glb',
+      green: '/assets/cars/models/cargreen.glb',
+      white: '/assets/cars/models/carwhite.glb',
+      yellow: '/assets/cars/models/caryellow.glb',
     },
-    width: 1.85,
-    length: 4.60,
+    spriteUrl: '/assets/cars/thumbnails/carblack_isometric.png',
+    spriteVariants: {
+      black: '/assets/cars/thumbnails/carblack_isometric.png',
+      blue: '/assets/cars/thumbnails/carblue_isometric.png',
+      red: '/assets/cars/thumbnails/carred_isometric.png',
+      green: '/assets/cars/thumbnails/cargreen_isometric.png',
+      white: '/assets/cars/thumbnails/carwhite_isometric.png',
+      yellow: '/assets/cars/thumbnails/caryellow_isometric.png',
+      default: '/assets/cars/thumbnails/carblack_isometric.png',
+    },
+    width: 2.04,
+    length: 4.22,
   },
   'strada-r': {
     ...CAR_SPECS['strada-r'],
+    unlockPoints: 800,
     primaryColor: '#C91624', // Rosso Corsa red
-    secondaryColor: '#121215',
-    accentColor: '#F2C300', // Yellow calipers
-    tagline: 'Built for high-octane top-end speed.',
-    bodyStyle: 'Pixel Exotic Sport',
+    secondaryColor: '#121215', // Black Racing Stripes
+    accentColor: '#F2C300', // Gold Decal
+    tagline: 'High-octane sprint racer with checkered rooftop livery.',
+    bodyStyle: 'Low-Poly Exotic Sprint',
     rimStyle: 'multi',
     wingStyle: 'super',
-    spriteUrl: '/assets/cars/Sport/sport_red.png',
-    spriteVariants: {
-      red: '/assets/cars/Sport/sport_red.png',
-      blue: '/assets/cars/Sport/sport_blue.png',
-      green: '/assets/cars/Sport/sport_green.png',
-      yellow: '/assets/cars/Sport/sport_yellow.png',
-      default: '/assets/cars/Sport/sport_red.png',
+    modelUrl: '/assets/cars/models/carred.glb',
+    modelVariants: {
+      red: '/assets/cars/models/carred.glb',
+      blue: '/assets/cars/models/carblue.glb',
+      black: '/assets/cars/models/carblack.glb',
+      yellow: '/assets/cars/models/caryellow.glb',
     },
-    width: 1.90,
-    length: 4.40,
+    spriteUrl: '/assets/cars/thumbnails/carred_isometric.png',
+    spriteVariants: {
+      red: '/assets/cars/thumbnails/carred_isometric.png',
+      blue: '/assets/cars/thumbnails/carblue_isometric.png',
+      green: '/assets/cars/thumbnails/cargreen_isometric.png',
+      yellow: '/assets/cars/thumbnails/caryellow_isometric.png',
+      default: '/assets/cars/thumbnails/carred_isometric.png',
+    },
+    width: 2.04,
+    length: 4.22,
   },
   'volta-e': {
     ...CAR_SPECS['volta-e'],
-    primaryColor: '#0084FF', // Electric Cyan
-    secondaryColor: '#1E232A',
+    unlockPoints: 150,
+    primaryColor: '#0084FF', // Electric Cyan Blue
+    secondaryColor: '#FFFFFF', // Dual White Racing Stripes
     accentColor: '#00F2FE', // Electric glow
-    tagline: 'Instant electric torque & recovery.',
-    bodyStyle: 'Pixel Electric Sport',
+    tagline: 'Instant electric torque with blue rally checkers.',
+    bodyStyle: 'Low-Poly Electric Spec',
     rimStyle: 'aero',
     wingStyle: 'active',
-    spriteUrl: '/assets/cars/Sport/sport_blue.png',
-    spriteVariants: {
-      blue: '/assets/cars/Sport/sport_blue.png',
-      green: '/assets/cars/Sport/sport_green.png',
-      red: '/assets/cars/Sport/sport_red.png',
-      yellow: '/assets/cars/Sport/sport_yellow.png',
-      default: '/assets/cars/Sport/sport_blue.png',
+    modelUrl: '/assets/cars/models/carblue.glb',
+    modelVariants: {
+      blue: '/assets/cars/models/carblue.glb',
+      green: '/assets/cars/models/cargreenvariant1.glb',
+      red: '/assets/cars/models/carred.glb',
+      yellow: '/assets/cars/models/caryellow.glb',
     },
-    width: 1.90,
-    length: 4.40,
+    spriteUrl: '/assets/cars/thumbnails/carblue_isometric.png',
+    spriteVariants: {
+      blue: '/assets/cars/thumbnails/carblue_isometric.png',
+      green: '/assets/cars/thumbnails/cargreen_isometric.png',
+      red: '/assets/cars/thumbnails/carred_isometric.png',
+      yellow: '/assets/cars/thumbnails/caryellow_isometric.png',
+      default: '/assets/cars/thumbnails/carblue_isometric.png',
+    },
+    width: 2.04,
+    length: 4.22,
   },
   'apex-gtr': {
     ...CAR_SPECS['apex-gtr'],
-    primaryColor: '#0084FF', // Miami Racing Blue
-    secondaryColor: '#11141A',
-    accentColor: '#FF6F00', // Amber calipers
-    tagline: 'Precision engineered twin-turbo weapon.',
-    bodyStyle: 'Pixel Track Coupe',
+    unlockPoints: 2200,
+    primaryColor: '#F4F6F9', // Pearl Silver / White
+    secondaryColor: '#11141A', // Dual Black Racing Stripes
+    accentColor: '#FF6F00', // Amber flame lower accent
+    tagline: 'Precision engineered twin-stripe speed machine.',
+    bodyStyle: 'Low-Poly Track Spec',
     rimStyle: 'spoke5',
     wingStyle: 'gt',
-    spriteUrl: '/assets/cars/Coupe/coupe_blue.png',
-    spriteVariants: {
-      blue: '/assets/cars/Coupe/coupe_blue.png',
-      midnight: '/assets/cars/Coupe/coupe_midnight.png',
-      red: '/assets/cars/Coupe/coupe_red.png',
-      green: '/assets/cars/Coupe/coupe_green.png',
-      default: '/assets/cars/Coupe/coupe_blue.png',
+    modelUrl: '/assets/cars/models/carwhite.glb',
+    modelVariants: {
+      white: '/assets/cars/models/carwhite.glb',
+      blue: '/assets/cars/models/carblue.glb',
+      black: '/assets/cars/models/carblack.glb',
+      red: '/assets/cars/models/carred.glb',
     },
-    width: 1.85,
-    length: 4.60,
+    spriteUrl: '/assets/cars/thumbnails/carwhite_isometric.png',
+    spriteVariants: {
+      white: '/assets/cars/thumbnails/carwhite_isometric.png',
+      blue: '/assets/cars/thumbnails/carblue_isometric.png',
+      midnight: '/assets/cars/thumbnails/carblack_isometric.png',
+      red: '/assets/cars/thumbnails/carred_isometric.png',
+      green: '/assets/cars/thumbnails/cargreen_isometric.png',
+      default: '/assets/cars/thumbnails/carwhite_isometric.png',
+    },
+    width: 2.04,
+    length: 4.22,
   },
   'vanguard-v12': {
     ...CAR_SPECS['vanguard-v12'],
-    primaryColor: '#636A73', // Nardo Gray
-    secondaryColor: '#15191E',
-    accentColor: '#D4AF37', // Gold calipers
-    tagline: 'Unmatched grand touring velocity.',
-    bodyStyle: 'Pixel Luxury Sedan',
+    unlockPoints: 4000,
+    primaryColor: '#E65100', // Sunset Bronze / Amber
+    secondaryColor: '#15191E', // Black Racing Stripes
+    accentColor: '#D4AF37', // Gold roof checks
+    tagline: 'Unmatched velocity wrapped in sunset rally livery.',
+    bodyStyle: 'Low-Poly Grand Prix',
     rimStyle: 'mesh',
     wingStyle: 'lip',
-    spriteUrl: '/assets/cars/Sedan/sedan_gray.png',
-    spriteVariants: {
-      gray: '/assets/cars/Sedan/sedan_gray.png',
-      blue: '/assets/cars/Sedan/sedan_blue.png',
-      green: '/assets/cars/Sedan/sedan_green.png',
-      red: '/assets/cars/Sedan/sedan_red.png',
-      default: '/assets/cars/Sedan/sedan_gray.png',
+    modelUrl: '/assets/cars/models/caryellowvariant.glb',
+    modelVariants: {
+      orange: '/assets/cars/models/caryellowvariant.glb',
+      yellow: '/assets/cars/models/caryellow.glb',
+      gray: '/assets/cars/models/carwhite.glb',
+      blue: '/assets/cars/models/carblue.glb',
+      black: '/assets/cars/models/carblack.glb',
     },
-    width: 1.90,
-    length: 4.80,
+    spriteUrl: '/assets/cars/thumbnails/caryellowvariant_isometric.png',
+    spriteVariants: {
+      orange: '/assets/cars/thumbnails/caryellowvariant_isometric.png',
+      gray: '/assets/cars/thumbnails/carwhite_isometric.png',
+      blue: '/assets/cars/thumbnails/carblue_isometric.png',
+      green: '/assets/cars/thumbnails/cargreen_isometric.png',
+      red: '/assets/cars/thumbnails/carred_isometric.png',
+      default: '/assets/cars/thumbnails/caryellowvariant_isometric.png',
+    },
+    width: 2.04,
+    length: 4.22,
   },
   'cyclone-rs': {
     ...CAR_SPECS['cyclone-rs'],
-    primaryColor: '#E65100', // Sunset Orange
-    secondaryColor: '#181A20',
-    accentColor: '#FF1744', // Red calipers
-    tagline: 'Raw horsepower with relentless agility.',
-    bodyStyle: 'Pixel Compact Turbo',
-    rimStyle: 'spoke5',
+    unlockPoints: 400,
+    primaryColor: '#6BE82A', // Acid Lime Green
+    secondaryColor: '#181A20', // Black Hood & Dual Stripes
+    accentColor: '#FF1744', // Red rally calipers
+    tagline: 'Raw horsepower with high-visibility neon rally finish.',
+    bodyStyle: 'Low-Poly Turbo Rally',
+    rimStyle: 'rally',
     wingStyle: 'ducktail',
-    spriteUrl: '/assets/cars/Compact/compact_orange.png',
-    spriteVariants: {
-      orange: '/assets/cars/Compact/compact_orange.png',
-      blue: '/assets/cars/Compact/compact_blue.png',
-      green: '/assets/cars/Compact/compact_green.png',
-      red: '/assets/cars/Compact/compact_red.png',
-      default: '/assets/cars/Compact/compact_orange.png',
+    modelUrl: '/assets/cars/models/cargreenvariant1.glb',
+    modelVariants: {
+      lime: '/assets/cars/models/cargreenvariant1.glb',
+      green: '/assets/cars/models/cargreen.glb',
+      orange: '/assets/cars/models/caryellowvariant.glb',
+      blue: '/assets/cars/models/carblue.glb',
+      red: '/assets/cars/models/carred.glb',
     },
-    width: 1.75,
-    length: 3.90,
+    spriteUrl: '/assets/cars/thumbnails/cargreenvariant1_isometric.png',
+    spriteVariants: {
+      lime: '/assets/cars/thumbnails/cargreenvariant1_isometric.png',
+      orange: '/assets/cars/thumbnails/caryellowvariant_isometric.png',
+      blue: '/assets/cars/thumbnails/carblue_isometric.png',
+      green: '/assets/cars/thumbnails/cargreen_isometric.png',
+      red: '/assets/cars/thumbnails/carred_isometric.png',
+      default: '/assets/cars/thumbnails/cargreenvariant1_isometric.png',
+    },
+    width: 2.04,
+    length: 4.22,
   },
   'phantom-spyder': {
     ...CAR_SPECS['phantom-spyder'],
-    primaryColor: '#6BE82A', // Acid Green
-    secondaryColor: '#0F1217',
-    accentColor: '#00E5FF', // Neon Cyan
-    tagline: 'Ultralight track speedster sensation.',
-    bodyStyle: 'Pixel Speedster Sport',
+    unlockPoints: 3000,
+    primaryColor: '#0B4728', // British Racing Green
+    secondaryColor: '#0F1217', // Black Racing Stripes
+    accentColor: '#6BE82A', // Lime roof checks
+    tagline: 'Ultralight rally legend with iconic British racing finish.',
+    bodyStyle: 'Low-Poly Speedster',
     rimStyle: 'multi',
     wingStyle: 'active',
-    spriteUrl: '/assets/cars/Sport/sport_green.png',
-    spriteVariants: {
-      green: '/assets/cars/Sport/sport_green.png',
-      blue: '/assets/cars/Sport/sport_blue.png',
-      red: '/assets/cars/Sport/sport_red.png',
-      yellow: '/assets/cars/Sport/sport_yellow.png',
-      default: '/assets/cars/Sport/sport_green.png',
+    modelUrl: '/assets/cars/models/cargreen.glb',
+    modelVariants: {
+      green: '/assets/cars/models/cargreen.glb',
+      lime: '/assets/cars/models/cargreenvariant1.glb',
+      forest: '/assets/cars/models/cargreenvariant2.glb',
+      blue: '/assets/cars/models/carblue.glb',
+      red: '/assets/cars/models/carred.glb',
+      yellow: '/assets/cars/models/caryellow.glb',
     },
-    width: 1.90,
-    length: 4.40,
+    spriteUrl: '/assets/cars/thumbnails/cargreen_isometric.png',
+    spriteVariants: {
+      green: '/assets/cars/thumbnails/cargreen_isometric.png',
+      blue: '/assets/cars/thumbnails/carblue_isometric.png',
+      red: '/assets/cars/thumbnails/carred_isometric.png',
+      yellow: '/assets/cars/thumbnails/caryellow_isometric.png',
+      default: '/assets/cars/thumbnails/cargreen_isometric.png',
+    },
+    width: 2.04,
+    length: 4.22,
   },
   'solaris-hyper': {
     ...CAR_SPECS['solaris-hyper'],
+    unlockPoints: 5000,
     primaryColor: '#FFC400', // Solar Gold
-    secondaryColor: '#13161C',
-    accentColor: '#7C3AED', // Royal Violet
-    tagline: 'Aerodynamic pinnacle with quad motors.',
-    bodyStyle: 'Pixel Hyper Sport',
+    secondaryColor: '#FFFFFF', // Dual White Racing Stripes
+    accentColor: '#7C3AED', // Royal Violet Accents
+    tagline: 'Aerodynamic pinnacle with checkered racing canopy.',
+    bodyStyle: 'Low-Poly Hyper Sport',
     rimStyle: 'aero',
     wingStyle: 'super',
-    spriteUrl: '/assets/cars/Sport/sport_yellow.png',
-    spriteVariants: {
-      yellow: '/assets/cars/Sport/sport_yellow.png',
-      red: '/assets/cars/Sport/sport_red.png',
-      blue: '/assets/cars/Sport/sport_blue.png',
-      green: '/assets/cars/Sport/sport_green.png',
-      default: '/assets/cars/Sport/sport_yellow.png',
+    modelUrl: '/assets/cars/models/caryellow.glb',
+    modelVariants: {
+      yellow: '/assets/cars/models/caryellow.glb',
+      amber: '/assets/cars/models/caryellowvariant.glb',
+      red: '/assets/cars/models/carred.glb',
+      blue: '/assets/cars/models/carblue.glb',
+      green: '/assets/cars/models/cargreen.glb',
     },
-    width: 1.90,
-    length: 4.40,
+    spriteUrl: '/assets/cars/thumbnails/caryellow_isometric.png',
+    spriteVariants: {
+      yellow: '/assets/cars/thumbnails/caryellow_isometric.png',
+      red: '/assets/cars/thumbnails/carred_isometric.png',
+      blue: '/assets/cars/thumbnails/carblue_isometric.png',
+      green: '/assets/cars/thumbnails/cargreen_isometric.png',
+      default: '/assets/cars/thumbnails/caryellow_isometric.png',
+    },
+    width: 2.04,
+    length: 4.22,
   },
 };
 
 export const CARS_LIST = Object.values(CARS_DATA);
 
+export function getCarModelUrl(carId: string, customColorHex?: string | null): string {
+  const car = CARS_DATA[carId] || CARS_DATA['scrapper-rust'] || CARS_DATA['meridian-gt'];
+  if (!customColorHex) return car.modelUrl;
+
+  const hex = customColorHex.toLowerCase();
+  if (hex.includes('0084ff') || hex.includes('blue')) return '/assets/cars/models/carblue.glb';
+  if (hex.includes('c91624') || hex.includes('red')) return '/assets/cars/models/carred.glb';
+  if (hex.includes('6be82a') || hex.includes('lime')) return '/assets/cars/models/cargreenvariant1.glb';
+  if (hex.includes('0b4728') || hex.includes('green')) return '/assets/cars/models/cargreen.glb';
+  if (hex.includes('ffc400') || hex.includes('yellow')) return '/assets/cars/models/caryellow.glb';
+  if (hex.includes('e65100') || hex.includes('orange') || hex.includes('sunset')) return '/assets/cars/models/caryellowvariant.glb';
+  if (hex.includes('f4f6f9') || hex.includes('636a73') || hex.includes('silver') || hex.includes('white') || hex.includes('grey') || hex.includes('gray')) return '/assets/cars/models/carwhite.glb';
+  if (hex.includes('16191e') || hex.includes('black') || hex.includes('midnight')) return '/assets/cars/models/carblack.glb';
+
+  return car.modelUrl;
+}
+
 export function getCarSpriteUrl(carId: string, customColorHex?: string | null): string {
-  const car = CARS_DATA[carId] || CARS_DATA['meridian-gt'];
+  const car = CARS_DATA[carId] || CARS_DATA['scrapper-rust'] || CARS_DATA['meridian-gt'];
   if (!customColorHex || !car.spriteVariants) return car.spriteUrl;
 
   const hex = customColorHex.toLowerCase();
   if (hex.includes('0084ff') || hex.includes('blue')) return car.spriteVariants.blue || car.spriteUrl;
   if (hex.includes('c91624') || hex.includes('red')) return car.spriteVariants.red || car.spriteUrl;
-  if (hex.includes('6be82a') || hex.includes('0b4728') || hex.includes('green')) return car.spriteVariants.green || car.spriteUrl;
+  if (hex.includes('6be82a') || hex.includes('lime')) return car.spriteVariants.lime || car.spriteUrl;
+  if (hex.includes('0b4728') || hex.includes('green')) return car.spriteVariants.green || car.spriteUrl;
   if (hex.includes('ffc400') || hex.includes('yellow')) return car.spriteVariants.yellow || car.spriteUrl;
   if (hex.includes('e65100') || hex.includes('orange')) return car.spriteVariants.orange || car.spriteUrl;
-  if (hex.includes('636a73') || hex.includes('gray')) return car.spriteVariants.gray || car.spriteUrl;
-  if (hex.includes('16191e') || hex.includes('midnight') || hex.includes('black')) return car.spriteVariants.midnight || car.spriteUrl;
+  if (hex.includes('636a73') || hex.includes('gray') || hex.includes('f4f6f9') || hex.includes('white')) return car.spriteVariants.white || car.spriteVariants.gray || car.spriteUrl;
+  if (hex.includes('16191e') || hex.includes('midnight') || hex.includes('black')) return car.spriteVariants.black || car.spriteVariants.midnight || car.spriteUrl;
 
   return car.spriteUrl;
 }

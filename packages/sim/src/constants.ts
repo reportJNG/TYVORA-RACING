@@ -9,7 +9,8 @@ export const SPEED_SCALE = 1.0;
 
 export const M = 10.0; // 10.0 meters per char (smooth, readable track progression)
 export const K_GAP = 1.6; // catch-up gain toward earned distance (s^-1)
-export const BRAKE_DECEL = 20.0; // 20.0 m/s^2 natural brake deceleration
+export const COAST_DECEL = 3.2; // 3.2 m/s^2 natural coasting drag between words & keystrokes (smooth glide)
+export const BRAKE_DECEL = 14.0; // 14.0 m/s^2 firm braking deceleration during mistakes/stall
 
 export const MISTAKE_SPEED_MULT = 0.65; // base speed retained on mistake (35% reduction)
 export const MISTAKE_STALL_MS = 600; // duration acceleration is suppressed after a mistake (ms)
@@ -43,6 +44,23 @@ export interface CarSpec {
 }
 
 export const CAR_SPECS: Record<string, CarSpec> = {
+  'scrapper-rust': {
+    id: 'scrapper-rust',
+    name: 'Rust-Runner 94',
+    category: 'Balanced',
+    vMax: 66.67, // 240 km/h - starter beater
+    accel: 11.2,
+    mistakePenaltyScale: 1.25,
+    stars: {
+      acceleration: 1,
+      topSpeed: 2,
+      control: 2,
+    },
+    displaySpecs: {
+      topSpeedKph: 240,
+      zeroToHundredSec: 5.2,
+    },
+  },
   'meridian-gt': {
     id: 'meridian-gt',
     name: 'Meridian GT',

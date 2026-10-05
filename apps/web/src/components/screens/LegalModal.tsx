@@ -26,14 +26,14 @@ export const LegalModal: React.FC<LegalModalProps> = ({
           ? 'Terms of Service'
           : activeTab === 'privacy'
           ? 'Privacy Policy'
-          : 'About TypeRace'
+          : 'About TYVORA-RACING'
       }
       maxWidth="lg"
     >
       <div className="flex border-b border-border mb-4">
         <button
           onClick={() => setActiveTab('about')}
-          className={`px-3 py-2 text-xs font-display font-bold tracking-wider uppercase transition-colors border-b-2 ${
+          className={`px-3.5 py-2 text-xs font-semibold tracking-wide transition-colors border-b-2 ${
             activeTab === 'about'
               ? 'border-accent text-accent'
               : 'border-transparent text-text-muted hover:text-text'
@@ -43,7 +43,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
         </button>
         <button
           onClick={() => setActiveTab('terms')}
-          className={`px-3 py-2 text-xs font-display font-bold tracking-wider uppercase transition-colors border-b-2 ${
+          className={`px-3.5 py-2 text-xs font-semibold tracking-wide transition-colors border-b-2 ${
             activeTab === 'terms'
               ? 'border-accent text-accent'
               : 'border-transparent text-text-muted hover:text-text'
@@ -53,7 +53,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
         </button>
         <button
           onClick={() => setActiveTab('privacy')}
-          className={`px-3 py-2 text-xs font-display font-bold tracking-wider uppercase transition-colors border-b-2 ${
+          className={`px-3.5 py-2 text-xs font-semibold tracking-wide transition-colors border-b-2 ${
             activeTab === 'privacy'
               ? 'border-accent text-accent'
               : 'border-transparent text-text-muted hover:text-text'
@@ -66,11 +66,11 @@ export const LegalModal: React.FC<LegalModalProps> = ({
       <div className="max-h-80 overflow-y-auto pr-2 text-xs text-text-muted space-y-3 font-sans leading-relaxed">
         {activeTab === 'about' && (
           <div>
-            <h3 className="text-text font-bold text-sm mb-1 font-display uppercase tracking-wider">
-              TypeRace Engine // Release 1.0
+            <h3 className="text-text font-bold text-sm mb-1 font-sans">
+              TYVORA-RACING Engine // 100% Client WASM
             </h3>
             <p className="mb-2">
-              TypeRace is a 3D browser racing game designed around clean velocity:
+              TYVORA-RACING is a 3D browser typing motorsport designed around clean velocity:
               <strong className="text-text"> Type fast, maintain focus, accelerate directly.</strong>
             </p>
             <p className="mb-2">
@@ -81,18 +81,19 @@ export const LegalModal: React.FC<LegalModalProps> = ({
               Engine Specifications
             </h4>
             <ul className="list-disc pl-4 space-y-1 text-text-muted">
+              <li>Client-side SQLite WebAssembly database for zero-latency local persistence and direct database backup.</li>
               <li>Independent position evaluation with zero cascading penalties.</li>
               <li>Instant Backspace support for momentum recovery.</li>
               <li>Procedural Web Audio engine sound synthesizer with dynamic RPM pitch tracking.</li>
-              <li>High-fidelity Three.js WebGL procedural asphalt highway & nighttime city skyline.</li>
-              <li>Deterministic simulation verification for all racing telemetry.</li>
+              <li>High-fidelity Three.js WebGL procedural asphalt highway & scenery.</li>
+              <li>Trash-to-hypercar point-based progression system.</li>
             </ul>
           </div>
         )}
 
         {activeTab === 'terms' && (
           <div>
-            <h3 className="text-text font-bold text-sm mb-1 font-display uppercase tracking-wider">
+            <h3 className="text-text font-bold text-sm mb-1 font-sans">
               Terms of Service
             </h3>
             <p className="mb-2">
@@ -117,7 +118,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
 
         {activeTab === 'privacy' && (
           <div>
-            <h3 className="text-text font-bold text-sm mb-1 font-display uppercase tracking-wider">
+            <h3 className="text-text font-bold text-sm mb-1 font-sans">
               Privacy Policy
             </h3>
             <p className="mb-2">

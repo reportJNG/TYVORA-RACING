@@ -10,32 +10,36 @@ export const Footer: React.FC<FooterProps> = ({ currentScreen, onOpenLegal }) =>
   if (currentScreen === 'race') return null;
 
   return (
-    <footer className="w-full py-3 border-t border-border mt-auto text-[11px] font-display uppercase tracking-widest text-text-faint transition-colors select-none">
-      <div className="max-w-7xl mx-auto px-4 md:px-8 flex flex-col sm:flex-row items-center justify-between gap-2">
+    <footer className="w-full py-4 border-t border-border mt-auto text-xs text-text-faint transition-colors select-none">
+      <div className="max-w-6xl mx-auto px-4 md:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <span className="text-text-muted font-bold">TYPERACE</span>
-          <span>//</span>
-          <span>KEYBOARD PHYSICS ENGINE</span>
+          <span className="font-semibold text-text">TYVORA</span>
+          <span className="text-text-faint">·</span>
+          <span>Fast-Paced Typing Motorsport</span>
         </div>
         <div className="flex items-center gap-5 text-text-muted">
           <button
             onClick={() => onOpenLegal('about')}
-            className="hover:text-accent transition-colors"
+            className="hover:text-text transition-colors"
           >
             About
           </button>
           <button
             onClick={() => onOpenLegal('terms')}
-            className="hover:text-accent transition-colors"
+            className="hover:text-text transition-colors"
           >
             Terms
           </button>
           <button
             onClick={() => onOpenLegal('privacy')}
-            className="hover:text-accent transition-colors"
+            className="hover:text-text transition-colors"
           >
             Privacy
           </button>
+          <div className="flex items-center gap-1.5 pl-2 border-l border-border text-[11px] text-text-faint">
+            <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+            <span>Operational</span>
+          </div>
         </div>
       </div>
     </footer>

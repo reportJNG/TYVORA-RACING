@@ -49,19 +49,24 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   };
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8 font-display select-none">
-      <h1 className="text-3xl font-bold uppercase tracking-wider text-text mb-6">
-        SYSTEM SETTINGS
-      </h1>
+    <div className="max-w-2xl mx-auto px-4 py-8 font-sans select-none">
+      <div className="mb-6">
+        <h1 className="text-3xl font-extrabold tracking-tight text-text">
+          Settings
+        </h1>
+        <p className="text-xs text-text-muted mt-1">
+          Customize audio, appearance, and accessibility preferences.
+        </p>
+      </div>
 
       {/* 1. APPEARANCE */}
-      <section className="mb-6 p-4 rounded-[6px] glass-panel border border-border">
-        <h2 className="text-[10px] uppercase tracking-widest text-text-muted font-bold mb-3">
-          APPEARANCE & THEME
+      <section className="mb-6 p-5 rounded-2xl glass-panel border border-border">
+        <h2 className="text-xs font-semibold text-text mb-3">
+          Appearance & Theme
         </h2>
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold uppercase text-text">Color Mode</span>
-          <div className="flex items-center bg-surface-2 rounded-[4px] p-0.5 border border-border text-xs uppercase tracking-wider">
+          <span className="text-xs text-text-muted">Color Theme</span>
+          <div className="flex items-center bg-surface-2 rounded-full p-1 border border-border text-xs">
             {(['dark', 'light', 'system'] as const).map((t) => (
               <button
                 key={t}
@@ -69,9 +74,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                   audioEngine.playUiClick();
                   setTheme(t);
                 }}
-                className={`px-3 py-1 rounded-[3px] transition-all text-xs font-display ${
+                className={`px-3 py-1 rounded-full transition-all text-xs capitalize ${
                   theme === t
-                    ? 'bg-accent text-accent-contrast font-bold shadow-sm'
+                    ? 'bg-accent text-white font-semibold shadow-sm'
                     : 'text-text-muted hover:text-text'
                 }`}
               >
@@ -83,14 +88,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       </section>
 
       {/* 2. AUDIO & FEEDBACK */}
-      <section className="mb-6 p-4 rounded-[6px] glass-panel border border-border space-y-3.5">
-        <h2 className="text-[10px] uppercase tracking-widest text-text-muted font-bold">
-          AUDIO ENGINE
+      <section className="mb-6 p-5 rounded-2xl glass-panel border border-border space-y-4">
+        <h2 className="text-xs font-semibold text-text">
+          Audio Engine
         </h2>
 
         <div className="flex items-center justify-between">
           <div>
-            <span className="text-xs font-semibold uppercase text-text block">
+            <span className="text-xs font-medium text-text block">
               Mechanical Keystroke Sound
             </span>
             <span className="text-[11px] text-text-muted">
@@ -99,13 +104,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           </div>
           <button
             onClick={() => handleToggle(() => setTypingSound(!typingSound))}
-            className={`w-10 h-5 rounded-full transition-colors relative ${
+            className={`w-11 h-6 rounded-full transition-colors relative ${
               typingSound ? 'bg-accent' : 'bg-surface-2 border border-border'
             }`}
           >
             <span
-              className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
-                typingSound ? 'right-0.5' : 'left-0.5'
+              className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
+                typingSound ? 'right-1' : 'left-1'
               }`}
             />
           </button>
@@ -113,8 +118,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
         <div className="flex items-center justify-between">
           <div>
-            <span className="text-xs font-semibold uppercase text-text block">
-              Engine RPM Sound Synthesizer
+            <span className="text-xs font-medium text-text block">
+              Engine Sound Synthesizer
             </span>
             <span className="text-[11px] text-text-muted">
               Dynamic pitch shifting with acceleration
@@ -122,13 +127,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           </div>
           <button
             onClick={() => handleToggle(() => setEngineSound(!engineSound))}
-            className={`w-10 h-5 rounded-full transition-colors relative ${
+            className={`w-11 h-6 rounded-full transition-colors relative ${
               engineSound ? 'bg-accent' : 'bg-surface-2 border border-border'
             }`}
           >
             <span
-              className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
-                engineSound ? 'right-0.5' : 'left-0.5'
+              className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
+                engineSound ? 'right-1' : 'left-1'
               }`}
             />
           </button>
@@ -136,7 +141,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
         <div className="flex items-center justify-between">
           <div>
-            <span className="text-xs font-semibold uppercase text-text block">
+            <span className="text-xs font-medium text-text block">
               Race Sound Effects
             </span>
             <span className="text-[11px] text-text-muted">
@@ -145,13 +150,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           </div>
           <button
             onClick={() => handleToggle(() => setRaceEffects(!raceEffects))}
-            className={`w-10 h-5 rounded-full transition-colors relative ${
+            className={`w-11 h-6 rounded-full transition-colors relative ${
               raceEffects ? 'bg-accent' : 'bg-surface-2 border border-border'
             }`}
           >
             <span
-              className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
-                raceEffects ? 'right-0.5' : 'left-0.5'
+              className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
+                raceEffects ? 'right-1' : 'left-1'
               }`}
             />
           </button>
@@ -159,14 +164,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       </section>
 
       {/* 3. SIMULATION & ACCESSIBILITY */}
-      <section className="mb-6 p-4 rounded-[6px] glass-panel border border-border space-y-3.5">
-        <h2 className="text-[10px] uppercase tracking-widest text-text-muted font-bold">
-          MOTION & SIMULATION
+      <section className="mb-6 p-5 rounded-2xl glass-panel border border-border space-y-4">
+        <h2 className="text-xs font-semibold text-text">
+          Motion & Accessibility
         </h2>
 
         <div className="flex items-center justify-between">
           <div>
-            <span className="text-xs font-semibold uppercase text-text block">
+            <span className="text-xs font-medium text-text block">
               Screen Shake & Velocity Lurch
             </span>
             <span className="text-[11px] text-text-muted">
@@ -175,13 +180,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           </div>
           <button
             onClick={() => handleToggle(() => setScreenShake(!screenShake))}
-            className={`w-10 h-5 rounded-full transition-colors relative ${
+            className={`w-11 h-6 rounded-full transition-colors relative ${
               screenShake ? 'bg-accent' : 'bg-surface-2 border border-border'
             }`}
           >
             <span
-              className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
-                screenShake ? 'right-0.5' : 'left-0.5'
+              className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
+                screenShake ? 'right-1' : 'left-1'
               }`}
             />
           </button>
@@ -189,7 +194,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
         <div className="flex items-center justify-between">
           <div>
-            <span className="text-xs font-semibold uppercase text-text block">
+            <span className="text-xs font-medium text-text block">
               Reduced Motion
             </span>
             <span className="text-[11px] text-text-muted">
@@ -198,13 +203,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           </div>
           <button
             onClick={() => handleToggle(() => setReducedMotion(!reducedMotion))}
-            className={`w-10 h-5 rounded-full transition-colors relative ${
+            className={`w-11 h-6 rounded-full transition-colors relative ${
               reducedMotion ? 'bg-accent' : 'bg-surface-2 border border-border'
             }`}
           >
             <span
-              className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
-                reducedMotion ? 'right-0.5' : 'left-0.5'
+              className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
+                reducedMotion ? 'right-1' : 'left-1'
               }`}
             />
           </button>
@@ -212,7 +217,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
         <div className="flex items-center justify-between">
           <div>
-            <span className="text-xs font-semibold uppercase text-text block">
+            <span className="text-xs font-medium text-text block">
               Large HUD Passage Font
             </span>
             <span className="text-[11px] text-text-muted">
@@ -221,13 +226,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           </div>
           <button
             onClick={() => handleToggle(() => setLargeText(!largeText))}
-            className={`w-10 h-5 rounded-full transition-colors relative ${
+            className={`w-11 h-6 rounded-full transition-colors relative ${
               largeText ? 'bg-accent' : 'bg-surface-2 border border-border'
             }`}
           >
             <span
-              className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
-                largeText ? 'right-0.5' : 'left-0.5'
+              className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
+                largeText ? 'right-1' : 'left-1'
               }`}
             />
           </button>
@@ -236,18 +241,18 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
       {/* 4. DRIVER ACCOUNT */}
       {currentUser && (
-        <section className="mb-6 p-4 rounded-[6px] glass-panel border border-border space-y-3">
-          <h2 className="text-[10px] uppercase tracking-widest text-text-muted font-bold">
-            DRIVER ACCOUNT
+        <section className="mb-6 p-5 rounded-2xl glass-panel border border-border space-y-3">
+          <h2 className="text-xs font-semibold text-text">
+            Driver Account
           </h2>
 
           <div className="flex items-center justify-between text-xs">
-            <span className="text-text-muted uppercase">Handle</span>
+            <span className="text-text-muted">Username</span>
             <span className="font-semibold text-text">{currentUser.username}</span>
           </div>
 
           <div className="flex items-center justify-between text-xs">
-            <span className="text-text-muted uppercase">Email</span>
+            <span className="text-text-muted">Email</span>
             <div className="flex items-center gap-2">
               <span className="font-mono text-text">
                 {showEmail ? currentUser.email : maskEmail(currentUser.email)}
@@ -278,7 +283,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               variant="destructive"
               size="sm"
               onClick={() => setIsDeleteModalOpen(true)}
-              className="w-full sm:w-auto ml-auto"
+              className="w-full sm:w-auto sm:ml-auto"
             >
               Delete Account
             </Button>
@@ -286,29 +291,55 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         </section>
       )}
 
-      {/* 5. INFORMATION & LEGAL */}
-      <section className="p-4 rounded-[6px] glass-panel border border-border">
-        <h2 className="text-[10px] uppercase tracking-widest text-text-muted font-bold mb-2">
-          SYSTEM INFORMATION
+      {/* 5. DATA BACKUP & EXPORT */}
+      <section className="mb-6 p-5 rounded-2xl glass-panel border border-border">
+        <h2 className="text-xs font-semibold text-text mb-2">
+          Database & Export
         </h2>
-        <div className="flex flex-col space-y-1.5 text-xs text-text-muted">
+        <p className="text-xs text-text-muted mb-4">
+          All records and stats are saved locally via SQLite WASM. You can export the database at any time.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-2.5">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => useAuthStore.getState().downloadDatabaseFile()}
+          >
+            Export SQLite Database (.sqlite)
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => useAuthStore.getState().downloadJsonBackup()}
+          >
+            Export JSON Backup
+          </Button>
+        </div>
+      </section>
+
+      {/* 6. INFORMATION & LEGAL */}
+      <section className="p-5 rounded-2xl glass-panel border border-border">
+        <h2 className="text-xs font-semibold text-text mb-3">
+          Information & Legal
+        </h2>
+        <div className="flex flex-col space-y-2 text-xs text-text-muted">
           <button
             onClick={() => onOpenLegal('terms')}
-            className="text-left hover:text-accent transition-colors uppercase tracking-wider"
+            className="text-left hover:text-text transition-colors"
           >
             Terms of Service →
           </button>
           <button
             onClick={() => onOpenLegal('privacy')}
-            className="text-left hover:text-accent transition-colors uppercase tracking-wider"
+            className="text-left hover:text-text transition-colors"
           >
             Privacy Policy →
           </button>
           <button
             onClick={() => onOpenLegal('about')}
-            className="text-left hover:text-accent transition-colors uppercase tracking-wider"
+            className="text-left hover:text-text transition-colors"
           >
-            About TypeRace Engine →
+            About TYVORA Racing →
           </button>
         </div>
       </section>

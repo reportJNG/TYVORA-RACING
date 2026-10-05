@@ -102,7 +102,7 @@ export const CarSelectScreen: React.FC<CarSelectScreenProps> = ({ onStartRace, o
             className="text-[11px] font-display uppercase tracking-widest text-text-muted hover:text-text mb-2 transition-colors flex items-center gap-1.5"
           >
             <span>←</span>
-            <span>Return to Race Hub</span>
+            <span>Return</span>
           </button>
 
           {/* TAB TOGGLE: CARS VS TRACKS */}
@@ -191,7 +191,7 @@ export const CarSelectScreen: React.FC<CarSelectScreenProps> = ({ onStartRace, o
             <div className="pt-2 border-t border-border">
               <div className="flex items-center gap-1.5 text-[10px] font-display uppercase tracking-wider text-text-muted mb-1.5">
                 <Palette className="w-3 h-3 text-accent" />
-                <span>Custom Livery Finish</span>
+                <span>Custom Livery</span>
               </div>
               <div className="flex items-center gap-1.5 flex-wrap">
                 {PAINT_PALETTE.map((color) => {
@@ -222,7 +222,7 @@ export const CarSelectScreen: React.FC<CarSelectScreenProps> = ({ onStartRace, o
           <div className="w-full md:w-80 p-3.5 rounded-[6px] glass-panel space-y-2 shadow-xl">
             <div className="text-[10px] font-display uppercase tracking-widest text-accent font-bold flex items-center gap-1.5">
               <Compass className="w-3 h-3 text-accent" />
-              <span>CIRCUIT CONDITIONS</span>
+              <span>CIRCUIT TELEMETRY</span>
             </div>
             <p className="text-xs text-text">{currentTrack.tagline}</p>
             <div className="pt-2 border-t border-border grid grid-cols-2 gap-2 text-xs font-display uppercase tracking-wider text-text-muted">
@@ -330,17 +330,16 @@ export const CarSelectScreen: React.FC<CarSelectScreenProps> = ({ onStartRace, o
                     }`}
                   >
                     {c.spriteUrl ? (
-                      <div className="w-5 h-8 flex items-center justify-center shrink-0">
+                      <div className="w-7 h-7 flex items-center justify-center shrink-0">
                         <img
                           src={c.spriteUrl}
                           alt={c.name}
-                          className="max-h-8 max-w-5 object-contain"
-                          style={{ imageRendering: 'pixelated' }}
+                          className="max-h-7 max-w-7 object-contain drop-shadow"
                         />
                       </div>
                     ) : (
                       <div
-                        className="w-2 h-2 rounded-full shrink-0"
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
                         style={{ backgroundColor: c.primaryColor }}
                       />
                     )}
@@ -405,7 +404,7 @@ export const CarSelectScreen: React.FC<CarSelectScreenProps> = ({ onStartRace, o
           className="w-full md:w-52 flex items-center justify-center gap-2 text-base tracking-widest shrink-0"
         >
           <Play className="w-4 h-4 fill-accent-contrast" />
-          <span>Launch Race</span>
+          <span>START RACE</span>
         </Button>
       </div>
     </div>

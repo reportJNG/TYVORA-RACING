@@ -74,4 +74,72 @@ describe('Car Physics Simulation', () => {
     expect(racer.finishMs).toBeGreaterThan(2000);
     expect(racer.finishMs).toBeLessThanOrEqual(t);
   });
+
+  it('preserves momentum smoothly during inter-word typing pauses without start-stop jerking', () => {
+    const car = CAR_SPECS['meridian-gt'];
+    const racer = createRacerSim('player', 'Player', 'B', true);
+    const target = 'smooth cruising speed';
+    const typing = createTypingState(target);
+    const targetDistance = target.length * M;
+
+    // Type the first word "smooth " at 80 WPM (150ms per key)
+    let t = 0;
+    for (let i = 0; i < 7; i++) {
+      onChar(typing, target[i], t);
+      for (let s = 0; s < 18; s++) {
+        t += DT * 1000;
+        stepCar(racer, typing, car, t, DT, targetDistance);
+      }
+    }
+
+    const speedAfterWord = racer.v;
+    expect(speedAfterWord).toBeGreaterThan(40.0); // High speed reached
+
+    // Now simulate human hesitation / inter-word pause of 400ms
+    const pauseStartSpeed = racer.v;
+    for (let s = 0; s < 48; s++) { // 48 * ~8.33ms = 400ms
+      t += DT * 1000;
+      stepCar(racer, typing, car, t, DT, targetDistance);
+    }
+
+    // During a 400ms inter-word pause, momentum is sustained!
+    // The car must NOT slam the brakes: speed drop should be minimal (< 2.0 m/s)
+    const speedAfterPause = racer.v;
+    const speedDrop = pauseStartSpeed - speedAfterPause;
+    expect(speedDrop).toBeLessThan(2.0);
+    expect(speedAfterPause).toBeGreaterThan(45.0);
+
+    // Physical acceleration should be gentle coasting decel, not emergency braking
+    expect(racer.accel).toBeGreaterThan(-4.0);
+  });
+
+  it('provides smooth aerodynamic slipstream drafting boost when trailing lead racer', () => {
+    const car = CAR_SPECS['apex-gtr'];
+    const racerNoDraft = createRacerSim('player1', 'Player 1', 'B', true);
+    const racerWithDraft = createRacerSim('player2', 'Player 2', 'B', true);
+    const target = 'drafting slingshot maneuver on the straightaway';
+    const typing1 = createTypingState(target);
+    const typing2 = createTypingState(target);
+    const targetDistance = target.length * M;
+
+    // Both racers type 15 characters at same pace
+    let t = 0;
+    for (let i = 0; i < 15; i++) {
+      onChar(typing1, target[i], t);
+      onChar(typing2, target[i], t);
+      for (let s = 0; s < 15; s++) {
+        t += DT * 1000;
+        // Racer 1 has no draft
+        stepCar(racerNoDraft, typing1, car, t, DT, targetDistance);
+        // Racer 2 is drafting closely (4 meters behind lead opponent at d = 50)
+        const leadDist = racerWithDraft.d + 4.0;
+        stepCar(racerWithDraft, typing2, car, t, DT, targetDistance, leadDist);
+      }
+    }
+
+    // Drafting racer should gain smooth slingshot advantage
+    expect(racerWithDraft.v).toBeGreaterThan(racerNoDraft.v);
+    expect(racerWithDraft.d).toBeGreaterThan(racerNoDraft.d);
+  });
 });
+

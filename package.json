@@ -1,8 +1,8 @@
 {
-  "name": "typerace-monorepo",
+  "name": "tyvora-racing-monorepo",
   "version": "1.0.0",
   "private": true,
-  "description": "TypeRace - Fast, addictive browser racing game driven by typing skill",
+  "description": "TYVORA-RACING - 3D Velocity Typing Motorsport with in-browser SQLite WASM architecture",
   "workspaces": [
     "packages/*",
     "apps/*"

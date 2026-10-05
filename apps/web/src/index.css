@@ -4,41 +4,47 @@
 
 :root,
 :root[data-theme="dark"] {
-  --bg: #090B10;
-  --surface: #10131B;
-  --surface-2: #161B26;
-  --border: #1E2535;
-  --border-strong: #2B344B;
-  --text: #F1F4FA;
-  --text-muted: #8590A2;
-  --text-faint: #4E576B;
-  --accent: #FF551C;
-  --accent-hover: #FF6E3A;
-  --accent-contrast: #07090D;
-  --danger: #FF3B30;
-  --success: #00E5A3;
-  --focus-ring: #FF7B4F;
-  --radius-s: 4px;
-  --radius-m: 8px;
+  --bg: #0B0E14;
+  --surface: #121620;
+  --surface-2: #18202E;
+  --surface-3: #222B3D;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --text: #F8FAFC;
+  --text-muted: #94A3B8;
+  --text-faint: #64748B;
+  --accent: #FF4B26;
+  --accent-hover: #FF6342;
+  --accent-contrast: #FFFFFF;
+  --accent-subtle: rgba(255, 75, 38, 0.12);
+  --accent-glow: rgba(255, 75, 38, 0.28);
+  --danger: #EF4444;
+  --success: #10B981;
+  --focus-ring: #FF6342;
+  --radius-s: 6px;
+  --radius-m: 10px;
 }
 
 :root[data-theme="light"] {
-  --bg: #F4F6F9;
+  --bg: #F8FAFC;
   --surface: #FFFFFF;
-  --surface-2: #EBEEF4;
-  --border: #D5DBE5;
-  --border-strong: #B5BFD0;
-  --text: #0E121A;
-  --text-muted: #566173;
-  --text-faint: #8E98A8;
-  --accent: #E5450F;
-  --accent-hover: #FF551C;
+  --surface-2: #F1F5F9;
+  --surface-3: #E2E8F0;
+  --border: #E2E8F0;
+  --border-strong: #CBD5E1;
+  --text: #0F172A;
+  --text-muted: #64748B;
+  --text-faint: #94A3B8;
+  --accent: #EA3E1E;
+  --accent-hover: #FF4B26;
   --accent-contrast: #FFFFFF;
-  --danger: #E02828;
-  --success: #08B87E;
-  --focus-ring: #B3360B;
-  --radius-s: 4px;
-  --radius-m: 8px;
+  --accent-subtle: rgba(234, 62, 30, 0.08);
+  --accent-glow: rgba(234, 62, 30, 0.20);
+  --danger: #DC2626;
+  --success: #059669;
+  --focus-ring: #EA3E1E;
+  --radius-s: 6px;
+  --radius-m: 10px;
 }
 
 body {
@@ -46,9 +52,10 @@ body {
   padding: 0;
   background-color: var(--bg);
   color: var(--text);
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   overflow-x: hidden;
   user-select: none;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* Custom scrollbar */
@@ -85,19 +92,63 @@ body {
 .racing-grid {
   background-size: 32px 32px;
   background-image: 
-    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+}
+
+:root[data-theme="light"] .racing-grid {
+  background-image: 
+    linear-gradient(to right, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
 }
 
 /* Crisp glass panel */
 .glass-panel {
-  background: rgba(16, 19, 27, 0.78);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(18, 22, 32, 0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--border);
 }
 
 :root[data-theme="light"] .glass-panel {
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.90);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--border);
+}
+
+/* Speed track road animation */
+@keyframes road-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-road {
+  animation: road-scroll 1.2s linear infinite;
+}
+
+/* Floating car bobbing animation */
+@keyframes car-float-1 {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-5px) rotate(0.4deg); }
+}
+
+@keyframes car-float-2 {
+  0%, 100% { transform: translateY(-3px) rotate(-0.3deg); }
+  50% { transform: translateY(2px) rotate(0.3deg); }
+}
+
+@keyframes car-float-3 {
+  0%, 100% { transform: translateY(1px) rotate(0.2deg); }
+  50% { transform: translateY(-4px) rotate(-0.4deg); }
+}
+
+.animate-car-1 {
+  animation: car-float-1 2.8s ease-in-out infinite;
+}
+.animate-car-2 {
+  animation: car-float-2 3.2s ease-in-out infinite 0.4s;
+}
+.animate-car-3 {
+  animation: car-float-3 2.5s ease-in-out infinite 0.8s;
 }

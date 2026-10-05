@@ -1,12 +1,14 @@
 // apps/web/src/components/scene/Vehicle3D.tsx
 import React, { useMemo, useRef } from 'react';
-import { useFrame, useLoader } from '@react-three/fiber';
+import { useFrame } from '@react-three/fiber';
+import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
-import { CARS_DATA, getCarSpriteUrl } from '../../data/cars.js';
+import { CARS_DATA, getCarModelUrl } from '../../data/cars.js';
 
 export interface Vehicle3DProps {
   carId: string;
   speedKmh?: number;
+  accel?: number;
   isBraking?: boolean;
   streak?: number;
   colorOverride?: string;
@@ -15,184 +17,237 @@ export interface Vehicle3DProps {
   scale?: number;
 }
 
+// Preload common 3D car models for instant rendering
+const PRELOAD_MODELS = [
+  '/assets/cars/models/carblack.glb',
+  '/assets/cars/models/carblue.glb',
+  '/assets/cars/models/carred.glb',
+  '/assets/cars/models/carwhite.glb',
+  '/assets/cars/models/caryellow.glb',
+  '/assets/cars/models/caryellowvariant.glb',
+  '/assets/cars/models/cargreen.glb',
+  '/assets/cars/models/cargreenvariant1.glb',
+  '/assets/cars/models/cargreenvariant2.glb',
+];
+PRELOAD_MODELS.forEach((url) => {
+  try {
+    useGLTF.preload(url);
+  } catch {
+    // ignore in environments without browser window
+  }
+});
+
 export const Vehicle3D: React.FC<Vehicle3DProps> = ({
   carId,
   speedKmh = 0,
+  accel = 0,
   isBraking = false,
-  streak = 0,
   colorOverride,
   position = [0, 0, 0],
   rotation = [0, 0, 0],
   scale = 1.0,
 }) => {
   const car = CARS_DATA[carId] || CARS_DATA['meridian-gt'];
-  const spriteUrl = getCarSpriteUrl(car.id, colorOverride);
+  const modelUrl = getCarModelUrl(car.id, colorOverride);
 
-  // Load pixel art texture
-  const texture = useLoader(THREE.TextureLoader, spriteUrl);
-
-  useMemo(() => {
-    if (texture) {
-      texture.magFilter = THREE.NearestFilter;
-      texture.minFilter = THREE.NearestFilter;
-      texture.generateMipmaps = false;
-      texture.colorSpace = THREE.SRGBColorSpace;
-      texture.needsUpdate = true;
-    }
-  }, [texture]);
+  // Load 3D GLB model
+  const { scene } = useGLTF(modelUrl);
 
   const chassisRef = useRef<THREE.Group>(null);
-  const flameRef = useRef<THREE.Group>(null);
   const prevRotY = useRef<number>(rotation[1]);
+  const turnRateSmoothed = useRef<number>(0);
+  const pitchSmoothed = useRef<number>(0);
+  const rollSmoothed = useRef<number>(0);
+  const wheelMeshes = useRef<THREE.Object3D[]>([]);
+  const backlightMatRef = useRef<THREE.MeshStandardMaterial | null>(null);
 
-  const width = car.width || 1.85;
-  const length = car.length || 4.40;
+  // Generate smooth radial-falloff contact shadow texture
+  const shadowTexture = useMemo(() => {
+    if (typeof document === 'undefined') return null;
+    const canvas = document.createElement('canvas');
+    canvas.width = 128;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    const grad = ctx.createRadialGradient(64, 64, 12, 64, 64, 64);
+    grad.addColorStop(0, 'rgba(2, 6, 18, 0.72)');
+    grad.addColorStop(0.45, 'rgba(2, 6, 18, 0.48)');
+    grad.addColorStop(0.8, 'rgba(2, 6, 18, 0.16)');
+    grad.addColorStop(1, 'rgba(2, 6, 18, 0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 128, 128);
+    const tex = new THREE.CanvasTexture(canvas);
+    return tex;
+  }, []);
 
-  // Dynamic chassis roll and suspension pitch
-  useFrame((_, delta) => {
+  // Deep clone scene graph and gather wheel nodes for physics animation
+  const clonedScene = useMemo(() => {
+    const clone = scene.clone(true);
+    const wheels: THREE.Object3D[] = [];
+
+    clone.traverse((child) => {
+      if ((child as THREE.Mesh).isMesh) {
+        const mesh = child as THREE.Mesh;
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+
+        const nameLower = child.name.toLowerCase();
+
+        // Detect tail lights for dynamic brake glow
+        if (nameLower.includes('backlight') || nameLower.includes('taillight')) {
+          const brakeMat = new THREE.MeshStandardMaterial({
+            color: '#7F1D1D',
+            emissive: new THREE.Color('#990011'),
+            emissiveIntensity: 0.5,
+            roughness: 0.2,
+            metalness: 0.1,
+          });
+          mesh.material = brakeMat;
+          backlightMatRef.current = brakeMat;
+          return;
+        }
+
+        // Detect headlights for crisp xenon forward beam glow
+        if (nameLower.includes('lightinfront') || nameLower.includes('headlight')) {
+          mesh.material = new THREE.MeshStandardMaterial({
+            color: '#F8FAFC',
+            emissive: new THREE.Color('#E0F2FE'),
+            emissiveIntensity: 1.5,
+            roughness: 0.1,
+            metalness: 0.2,
+          });
+          return;
+        }
+
+        // Enhance body material reflectivity and metallic finish
+        if (mesh.material) {
+          if (Array.isArray(mesh.material)) {
+            mesh.material = mesh.material.map((m) => {
+              const clonedMat = m.clone() as THREE.MeshStandardMaterial;
+              clonedMat.roughness = Math.min(clonedMat.roughness ?? 0.4, 0.38);
+              clonedMat.metalness = Math.max(clonedMat.metalness ?? 0.3, 0.48);
+              return clonedMat;
+            });
+          } else {
+            const clonedMat = mesh.material.clone() as THREE.MeshStandardMaterial;
+            clonedMat.roughness = Math.min(clonedMat.roughness ?? 0.4, 0.38);
+            clonedMat.metalness = Math.max(clonedMat.metalness ?? 0.3, 0.48);
+            mesh.material = clonedMat;
+          }
+        }
+      }
+
+      // Detect wheel nodes for rolling rotation
+      if (child.name.toLowerCase().includes('wheel')) {
+        wheels.push(child);
+      }
+    });
+
+    wheelMeshes.current = wheels;
+    return clone;
+  }, [scene]);
+
+  // Scaled dimensions:
+  // Base model is ~8.125 length (X), ~3.926 width (Z), ~3.464 height (Y).
+  // Model scale factor 0.52 produces length 4.22m, width 2.04m, height 1.80m.
+  const modelScale = 0.52;
+  const carWidth = car.width || 2.04;
+  const carLength = car.length || 4.22;
+
+  // Dynamic physics simulation: wheel roll, cornering body lean, suspension dive/squat
+  useFrame((state, delta) => {
     if (!chassisRef.current) return;
+    const clampedDt = Math.min(0.05, Math.max(0.001, delta));
 
-    // Detect angular velocity around Y (turning)
+    // 1. Angular velocity around Y (cornering detection with low-pass filter)
     let rotDelta = rotation[1] - prevRotY.current;
     if (rotDelta > Math.PI) rotDelta -= Math.PI * 2;
     if (rotDelta < -Math.PI) rotDelta += Math.PI * 2;
     prevRotY.current = rotation[1];
 
-    const turnRate = Math.max(-1, Math.min(1, rotDelta / (delta || 0.016)));
-    const targetRoll = -turnRate * 0.05; // Lean into corners
-    const targetPitch = isBraking ? -0.04 : speedKmh > 20 ? 0.02 : 0; // Pitch under brake/accel
+    const rawTurnRate = rotDelta / clampedDt;
+    turnRateSmoothed.current += (rawTurnRate - turnRateSmoothed.current) * Math.min(1.0, clampedDt * 8.0);
+    const targetRoll = -Math.max(-0.85, Math.min(0.85, turnRateSmoothed.current)) * 0.048;
 
-    chassisRef.current.rotation.z += (targetRoll - chassisRef.current.rotation.z) * Math.min(1, delta * 10);
-    chassisRef.current.rotation.x += (targetPitch - chassisRef.current.rotation.x) * Math.min(1, delta * 10);
+    // 2. Physical suspension pitch:
+    // Dynamic squat under throttle acceleration, front dive under braking/mistake
+    let targetPitch = 0;
+    if (isBraking) {
+      targetPitch = -0.052; // Active brake dive
+    } else if (accel > 0.8) {
+      targetPitch = Math.min(0.036, (accel / 16.0) * 0.036); // Throttle squat
+    } else if (accel < -1.2) {
+      targetPitch = Math.max(-0.040, (accel / 14.0) * 0.040); // Coasting decel
+    }
 
-    // Flame flicker animation
-    if (flameRef.current && streak >= 5) {
-      const flicker = 0.85 + Math.random() * 0.3;
-      flameRef.current.scale.set(flicker, flicker, flicker);
+    // Critically damped chassis spring easing
+    pitchSmoothed.current += (targetPitch - pitchSmoothed.current) * Math.min(1.0, clampedDt * 10.0);
+    rollSmoothed.current += (targetRoll - rollSmoothed.current) * Math.min(1.0, clampedDt * 10.0);
+    chassisRef.current.rotation.x = pitchSmoothed.current;
+    chassisRef.current.rotation.z = rollSmoothed.current;
+
+    // 3. Engine idle purr & High-speed aerodynamic road vibration
+    const time = state.clock.getElapsedTime();
+    const speedRatio = Math.min(1.0, speedKmh / 260);
+    const idleVibe = speedKmh < 10 ? Math.sin(time * 20) * 0.0016 : 0;
+    const roadVibe = Math.sin(time * 46) * 0.0032 * speedRatio;
+    chassisRef.current.position.y = idleVibe + roadVibe;
+
+    // 4. Physical wheel spin matching car velocity
+    if (speedKmh > 0.5 && wheelMeshes.current.length > 0) {
+      const speedMs = speedKmh / 3.6;
+      // Wheel local radius is ~0.63 units
+      const dTheta = (speedMs / 0.33) * clampedDt;
+      for (const wheel of wheelMeshes.current) {
+        wheel.rotation.z -= dTheta;
+      }
+    }
+
+    // 5. Reactive tail light glow during braking
+    if (backlightMatRef.current) {
+      const isHotBraking = isBraking || accel < -4.0;
+      backlightMatRef.current.emissive.set(isHotBraking ? '#FF1E28' : '#7F1D1D');
+      backlightMatRef.current.emissiveIntensity = isHotBraking ? 2.6 : 0.45;
     }
   });
 
   return (
     <group position={position} rotation={rotation} scale={scale}>
-      {/* 1. DYNAMIC GROUND DROP SHADOW */}
-      <mesh
-        position={[0.12, 0.03, -0.08]}
-        rotation={[-Math.PI / 2, 0, 0]}
-      >
-        <planeGeometry args={[width * 1.06, length * 1.06]} />
-        <meshBasicMaterial
-          map={texture}
-          color="#000000"
-          transparent
-          opacity={0.42}
-          depthWrite={false}
-        />
+      {/* 1. SOFT AMBIENT OCCLUSION GROUND CONTACT SHADOW */}
+      <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[carWidth * 1.35, carLength * 1.25]} />
+        {shadowTexture ? (
+          <meshBasicMaterial
+            map={shadowTexture}
+            transparent
+            opacity={0.85}
+            depthWrite={false}
+          />
+        ) : (
+          <meshBasicMaterial
+            color="#030712"
+            transparent
+            opacity={0.4}
+            depthWrite={false}
+          />
+        )}
       </mesh>
 
-      {/* 2. DYNAMIC ASPHALT HEADLIGHT BEAMS */}
-      <group position={[0, 0.04, length * 0.48]}>
-        {/* Left beam */}
-        <mesh position={[-width * 0.28, 0, 1.8]} rotation={[-Math.PI / 2, 0, 0.06]}>
-          <planeGeometry args={[0.9, 3.8]} />
-          <meshBasicMaterial
-            color="#FFFBEB"
-            transparent
-            opacity={0.16}
-            depthWrite={false}
-            blending={THREE.AdditiveBlending}
-          />
-        </mesh>
-        {/* Right beam */}
-        <mesh position={[width * 0.28, 0, 1.8]} rotation={[-Math.PI / 2, 0, -0.06]}>
-          <planeGeometry args={[0.9, 3.8]} />
-          <meshBasicMaterial
-            color="#FFFBEB"
-            transparent
-            opacity={0.16}
-            depthWrite={false}
-            blending={THREE.AdditiveBlending}
-          />
-        </mesh>
-      </group>
-
-      {/* 3. 2.5D ELEVATED CHASSIS BODY */}
-      <group ref={chassisRef} position={[0, 0.28, 0]}>
-        {/* Primary Pixel Art Vehicle Plane */}
-        <mesh rotation={[-Math.PI / 2, 0, 0]} castShadow>
-          <planeGeometry args={[width, length]} />
-          <meshStandardMaterial
-            map={texture}
-            transparent
-            alphaTest={0.08}
-            roughness={0.35}
-            metalness={0.15}
-          />
-        </mesh>
-
-        {/* Dynamic Brake Light Glows */}
-        <group position={[0, 0.02, -length * 0.48]}>
-          <mesh position={[-width * 0.36, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-            <circleGeometry args={[0.18, 12]} />
-            <meshBasicMaterial
-              color="#FF0000"
-              transparent
-              opacity={isBraking ? 0.95 : 0.4}
-              depthWrite={false}
-            />
-          </mesh>
-          <mesh position={[width * 0.36, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-            <circleGeometry args={[0.18, 12]} />
-            <meshBasicMaterial
-              color="#FF0000"
-              transparent
-              opacity={isBraking ? 0.95 : 0.4}
-              depthWrite={false}
-            />
-          </mesh>
-
-          {/* Intense Brake Halo when actively stopping */}
-          {isBraking && (
-            <mesh position={[0, 0.01, -0.1]} rotation={[-Math.PI / 2, 0, 0]}>
-              <planeGeometry args={[width * 1.1, 0.8]} />
-              <meshBasicMaterial
-                color="#EF4444"
-                transparent
-                opacity={0.45}
-                depthWrite={false}
-                blending={THREE.AdditiveBlending}
-              />
-            </mesh>
-          )}
+      {/* 2. DYNAMIC SUSPENSION CHASSIS WITH TRUE 3D LOW-POLY MODEL */}
+      <group ref={chassisRef} position={[0, 0, 0]}>
+        {/* 3D Model Node:
+            Rotated -90° on Y so front (+X) aligns with track forward (+Z).
+            Raised by 2.378 in local coordinates so wheel bottoms touch ground Y = 0.
+        */}
+        <group
+          position={[0, 2.378 * modelScale, 0]}
+          rotation={[0, -Math.PI / 2, 0]}
+          scale={modelScale}
+        >
+          <primitive object={clonedScene} />
         </group>
-
-        {/* 4. DYNAMIC RETRO BOOST NITRO FLAMES (When streak >= 5) */}
-        {streak >= 5 && speedKmh > 30 && (
-          <group ref={flameRef} position={[0, 0.02, -length * 0.52]}>
-            {/* Left exhaust burst */}
-            <mesh position={[-width * 0.24, 0, -0.45]} rotation={[-Math.PI / 2, 0, 0]}>
-              <planeGeometry args={[0.32, 0.95]} />
-              <meshBasicMaterial
-                color={streak >= 15 ? '#00E5FF' : '#FF551C'}
-                transparent
-                opacity={0.88}
-                depthWrite={false}
-                blending={THREE.AdditiveBlending}
-              />
-            </mesh>
-            {/* Right exhaust burst */}
-            <mesh position={[width * 0.24, 0, -0.45]} rotation={[-Math.PI / 2, 0, 0]}>
-              <planeGeometry args={[0.32, 0.95]} />
-              <meshBasicMaterial
-                color={streak >= 15 ? '#00E5FF' : '#FF551C'}
-                transparent
-                opacity={0.88}
-                depthWrite={false}
-                blending={THREE.AdditiveBlending}
-              />
-            </mesh>
-          </group>
-        )}
       </group>
     </group>
   );
 };
+

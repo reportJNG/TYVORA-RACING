@@ -214,4 +214,65 @@ describe('Web Stores & Game Configuration', () => {
     expect(lastResult?.timeSeconds).toBeGreaterThan(0);
     expect(lastResult?.wpm).toBeGreaterThan(0);
   });
+
+  it('guarantees only starter trash car is free and others unlock with points', () => {
+    expect(CARS_DATA['scrapper-rust']).toBeDefined();
+    expect(CARS_DATA['scrapper-rust'].unlockPoints).toBe(0);
+
+    // Other cars require points
+    expect(CARS_DATA['volta-e'].unlockPoints).toBeGreaterThan(0);
+    expect(CARS_DATA['cyclone-rs'].unlockPoints).toBeGreaterThan(CARS_DATA['volta-e'].unlockPoints);
+    expect(CARS_DATA['strada-r'].unlockPoints).toBeGreaterThan(CARS_DATA['cyclone-rs'].unlockPoints);
+    expect(CARS_DATA['meridian-gt'].unlockPoints).toBeGreaterThan(CARS_DATA['strada-r'].unlockPoints);
+    expect(CARS_DATA['apex-gtr'].unlockPoints).toBeGreaterThan(CARS_DATA['meridian-gt'].unlockPoints);
+    expect(CARS_DATA['phantom-spyder'].unlockPoints).toBeGreaterThan(CARS_DATA['apex-gtr'].unlockPoints);
+    expect(CARS_DATA['solaris-hyper'].unlockPoints).toBeGreaterThan(CARS_DATA['phantom-spyder'].unlockPoints);
+  });
+
+  it('executes in-browser SQLite WASM operations and car unlock progression', async () => {
+    const { sqliteService } = await import('../src/db/sqlite.js');
+    await sqliteService.init();
+
+    // Signup test user
+    const testUsername = 'WasmRacer' + Date.now();
+    const signupRes = sqliteService.signup(testUsername, `${testUsername}@tyvora.racing`, 'pass1234');
+    expect(signupRes.success).toBe(true);
+    const userId = signupRes.user?.id!;
+
+    // Initial unlocks: only scrapper-rust
+    const initialUnlocked = sqliteService.getUnlockedCarIds(userId);
+    expect(initialUnlocked).toContain('scrapper-rust');
+    expect(initialUnlocked).not.toContain('volta-e');
+
+    // Simulate winning a race that awards points >= 150 (volta-e requirement)
+    const raceRes = sqliteService.recordRace({
+      userId,
+      isWin: true,
+      timeSeconds: 18.2,
+      wpm: 95,
+      accuracy: 99,
+      mistakes: 0,
+      carId: 'scrapper-rust',
+      difficulty: 'normal',
+      counted: true,
+    });
+
+    expect(raceRes.pointsEarned).toBeGreaterThanOrEqual(150);
+    expect(raceRes.newTotalPoints).toBeGreaterThanOrEqual(150);
+
+    // volta-e should now be unlocked!
+    const updatedUnlocked = sqliteService.getUnlockedCarIds(userId);
+    expect(updatedUnlocked).toContain('volta-e');
+
+    // Export database binary
+    const binary = sqliteService.exportDatabaseBinary();
+    expect(binary).toBeInstanceOf(Uint8Array);
+    expect(binary.byteLength).toBeGreaterThan(0);
+
+    // Verify restore works
+    await sqliteService.importDatabaseBinary(binary);
+    const restoredUser = sqliteService.getUserById(userId);
+    expect(restoredUser?.username).toBe(testUsername);
+    expect(restoredUser?.points).toBe(raceRes.newTotalPoints);
+  });
 });

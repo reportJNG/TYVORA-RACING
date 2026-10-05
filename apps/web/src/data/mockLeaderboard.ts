@@ -12,6 +12,7 @@ export interface LeaderboardRacer {
   bestTimeSeconds: number;
   favoriteCarId: string;
   memberSince: string;
+  totalPoints?: number;
 }
 
 export const SEED_LEADERBOARD: LeaderboardRacer[] = [

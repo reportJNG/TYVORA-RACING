@@ -18,6 +18,7 @@ export const RaceCanvas: React.FC = React.memo(() => {
   const customPaintColor = useRaceStore((state) => state.customPaintColor);
   const playerSim = useRaceStore((state) => state.playerSim);
   const opponents = useRaceStore((state) => state.opponents);
+  const raceTimeMs = useRaceStore((state) => state.raceTimeMs);
   const streak = useTypingStore((state) => state.snapshot.streak);
 
   const track = TRACKS_DATA[selectedTrackId] || TRACKS_DATA['pacific-coast'];
@@ -53,7 +54,7 @@ export const RaceCanvas: React.FC = React.memo(() => {
   const opp2RotY = Math.atan2(opp2Tangent.x, opp2Tangent.z);
 
   const playerSpeedKmh = playerSim.v * 3.6;
-  const isPlayerStalled = playerSim.stallUntilMs > Date.now();
+  const isPlayerStalled = playerSim.stallUntilMs > raceTimeMs;
 
   return (
     <div className="absolute inset-0 w-full h-full pointer-events-none">
@@ -101,6 +102,7 @@ export const RaceCanvas: React.FC = React.memo(() => {
           carId={selectedCarId}
           colorOverride={customPaintColor || undefined}
           speedKmh={playerSpeedKmh}
+          accel={playerSim.accel}
           isBraking={isPlayerStalled}
           streak={streak}
           position={[playerPos.x, playerPos.y, playerPos.z]}
@@ -113,6 +115,7 @@ export const RaceCanvas: React.FC = React.memo(() => {
             carId={opp1.car.id}
             role="rival"
             speedKmh={opp1.racer.v * 3.6}
+            accel={opp1.racer.accel}
             position={[opp1Pos.x, opp1Pos.y, opp1Pos.z]}
             rotation={[0, opp1RotY, 0]}
             playerDistance={playerSim.d}
@@ -126,6 +129,7 @@ export const RaceCanvas: React.FC = React.memo(() => {
             carId={opp2.car.id}
             role="pacer"
             speedKmh={opp2.racer.v * 3.6}
+            accel={opp2.racer.accel}
             position={[opp2Pos.x, opp2Pos.y, opp2Pos.z]}
             rotation={[0, opp2RotY, 0]}
             playerDistance={playerSim.d}

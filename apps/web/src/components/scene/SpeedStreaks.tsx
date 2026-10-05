@@ -13,6 +13,14 @@ export interface SpeedStreaksProps {
 const STREAK_COUNT = 28;
 const DUST_COUNT = 16;
 
+const _tangent = new THREE.Vector3();
+const _up = new THREE.Vector3(0, 1, 0);
+const _right = new THREE.Vector3();
+const _worldPos = new THREE.Vector3();
+const _rotMatrix = new THREE.Matrix4();
+const _rotation = new THREE.Euler();
+const _zero = new THREE.Vector3(0, 0, 0);
+
 export const SpeedStreaks: React.FC<SpeedStreaksProps> = ({
   playerPos,
   playerTangent,
@@ -65,10 +73,10 @@ export const SpeedStreaks: React.FC<SpeedStreaksProps> = ({
 
   useFrame((_, delta) => {
     if (reducedMotion) return;
+    const clampedDelta = Math.min(0.05, Math.max(0.001, delta));
 
-    const tangent = playerTangent.clone().normalize();
-    const up = new THREE.Vector3(0, 1, 0);
-    const right = new THREE.Vector3().crossVectors(tangent, up).normalize();
+    _tangent.copy(playerTangent).normalize();
+    _right.crossVectors(_tangent, _up).normalize();
 
     // 1. AERODYNAMIC WIND STREAKS (Smooth ramp starting at 70 km/h)
     if (instancedStreaksRef.current) {
@@ -80,28 +88,23 @@ export const SpeedStreaks: React.FC<SpeedStreaksProps> = ({
         const speedNorm = Math.min(1.0, (speedKmh - 70) / 150); // 0.0 at 70 km/h, 1.0 at 220 km/h
         const flowVelocity = (speedKmh * 1000) / 3600; // m/s
 
-        const rotMatrix = new THREE.Matrix4().lookAt(
-          new THREE.Vector3(0, 0, 0),
-          tangent,
-          up
-        );
-        const rotation = new THREE.Euler().setFromRotationMatrix(rotMatrix);
+        _rotMatrix.lookAt(_zero, _tangent, _up);
+        _rotation.setFromRotationMatrix(_rotMatrix);
 
         for (let i = 0; i < STREAK_COUNT; i++) {
           const item = streakData[i];
-          item.offset.z -= flowVelocity * item.speedMult * delta * 0.45;
+          item.offset.z -= flowVelocity * item.speedMult * clampedDelta * 0.45;
           if (item.offset.z < -10) {
             item.offset.z = 20 + Math.random() * 8;
           }
 
-          const worldPos = playerPos
-            .clone()
-            .add(right.clone().multiplyScalar(item.offset.x))
-            .add(up.clone().multiplyScalar(item.offset.y))
-            .add(tangent.clone().multiplyScalar(item.offset.z));
+          _worldPos.copy(playerPos)
+            .addScaledVector(_right, item.offset.x)
+            .addScaledVector(_up, item.offset.y)
+            .addScaledVector(_tangent, item.offset.z);
 
-          dummy.position.copy(worldPos);
-          dummy.rotation.copy(rotation);
+          dummy.position.copy(_worldPos);
+          dummy.rotation.copy(_rotation);
           const stretch = item.length * (0.8 + speedNorm * 2.2);
           dummy.scale.set(0.018, 0.018, stretch);
           dummy.updateMatrix();
@@ -127,24 +130,23 @@ export const SpeedStreaks: React.FC<SpeedStreaksProps> = ({
 
         for (let i = 0; i < DUST_COUNT; i++) {
           const dust = dustData[i];
-          dust.life += delta * dust.speed * (1.0 + speedNorm);
+          dust.life += clampedDelta * dust.speed * (1.0 + speedNorm);
           if (dust.life > dust.maxLife) {
             dust.life = 0;
             dust.offset.z = -2.2 - Math.random() * 0.5;
             dust.offset.x = (i % 2 === 0 ? -1 : 1) * (0.65 + Math.random() * 0.2);
           }
 
-          dust.offset.z -= delta * (speedKmh * 0.15);
-          dust.offset.y += delta * 0.15;
+          dust.offset.z -= clampedDelta * (speedKmh * 0.15);
+          dust.offset.y += clampedDelta * 0.15;
 
           const progress = dust.life / dust.maxLife;
-          const dustPos = playerPos
-            .clone()
-            .add(right.clone().multiplyScalar(dust.offset.x))
-            .add(up.clone().multiplyScalar(dust.offset.y))
-            .add(tangent.clone().multiplyScalar(dust.offset.z));
+          _worldPos.copy(playerPos)
+            .addScaledVector(_right, dust.offset.x)
+            .addScaledVector(_up, dust.offset.y)
+            .addScaledVector(_tangent, dust.offset.z);
 
-          dummy.position.copy(dustPos);
+          dummy.position.copy(_worldPos);
           const pScale = (0.04 + progress * 0.08) * (0.8 + speedNorm * 0.5);
           dummy.scale.set(pScale, pScale, pScale);
           dummy.updateMatrix();

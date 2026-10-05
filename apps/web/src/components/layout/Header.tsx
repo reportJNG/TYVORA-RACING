@@ -1,6 +1,6 @@
 // apps/web/src/components/layout/Header.tsx
 import React, { useState } from 'react';
-import { User, Settings, LogOut, ChevronDown, Volume2, VolumeX } from 'lucide-react';
+import { User, Settings, LogOut, ChevronDown, Volume2, VolumeX, Download, Zap } from 'lucide-react';
 import { useAuthStore } from '../../stores/useAuthStore.js';
 import { useSettingsStore } from '../../stores/useSettingsStore.js';
 import { Avatar } from '../common/Avatar.js';
@@ -18,7 +18,7 @@ export const Header: React.FC<HeaderProps> = ({
   onNavigate,
   onOpenAuthModal,
 }) => {
-  const { currentUser, isAuthenticated, logout } = useAuthStore();
+  const { currentUser, isAuthenticated, logout, downloadDatabaseFile } = useAuthStore();
   const {
     typingSound,
     engineSound,
@@ -49,34 +49,48 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full h-14 bg-bg/90 backdrop-blur-md border-b border-border transition-colors">
-      <div className="max-w-7xl h-full mx-auto px-4 md:px-8 flex items-center justify-between">
-        {/* Brand / Logo */}
+    <header className="sticky top-0 z-40 w-full h-14 bg-bg/85 backdrop-blur-md border-b border-border transition-colors">
+      <div className="max-w-6xl h-full mx-auto px-4 md:px-8 flex items-center justify-between">
+        {/* Brand / Logo: TYVORA */}
         <div
           onClick={() => {
             audioEngine.playUiClick();
             onNavigate('home');
           }}
-          className="flex items-center gap-2 cursor-pointer group select-none"
+          className="flex items-center gap-2.5 cursor-pointer group select-none"
         >
-          <div className="h-6 w-1 bg-accent rounded-full transition-transform group-hover:scale-y-125" />
-          <div className="font-display font-bold tracking-widest text-xl text-text group-hover:text-accent transition-colors flex items-center gap-1.5">
-            <span>TYPE</span>
-            <span className="text-accent">//</span>
-            <span>RACE</span>
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-accent to-accent-hover flex items-center justify-center text-white shadow-sm shadow-accent/30 group-hover:scale-105 transition-transform">
+            <Zap className="w-4 h-4 fill-white" />
+          </div>
+          <div className="font-display font-extrabold tracking-wider text-lg text-text group-hover:text-accent transition-colors flex items-center gap-1.5">
+            <span>TYVORA</span>
+            <span className="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded bg-surface-2 border border-border text-text-muted">RACE</span>
           </div>
         </div>
 
-        {/* Center Nav */}
-        <nav className="flex items-center gap-1 font-display uppercase tracking-widest text-xs">
+        {/* Center Nav: Home, Race, Leaderboard */}
+        <nav className="flex items-center gap-1 p-1 rounded-full bg-surface-2/60 border border-border/80 backdrop-blur-md text-xs">
           <button
             onClick={() => {
               audioEngine.playUiClick();
               onNavigate('home');
             }}
-            className={`px-3 py-1.5 rounded transition-all ${
+            className={`px-3.5 py-1 rounded-full font-medium transition-all ${
               currentScreen === 'home'
-                ? 'text-accent bg-accent/10 font-bold'
+                ? 'bg-accent text-white font-semibold shadow-sm shadow-accent/20'
+                : 'text-text-muted hover:text-text hover:bg-surface-2'
+            }`}
+          >
+            Home
+          </button>
+          <button
+            onClick={() => {
+              audioEngine.playUiClick();
+              onNavigate('race');
+            }}
+            className={`px-3.5 py-1 rounded-full font-medium transition-all ${
+              currentScreen === 'race'
+                ? 'bg-accent text-white font-semibold shadow-sm shadow-accent/20'
                 : 'text-text-muted hover:text-text hover:bg-surface-2'
             }`}
           >
@@ -85,44 +99,31 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={() => {
               audioEngine.playUiClick();
-              onNavigate('car-select');
-            }}
-            className={`px-3 py-1.5 rounded transition-all ${
-              currentScreen === 'car-select'
-                ? 'text-accent bg-accent/10 font-bold'
-                : 'text-text-muted hover:text-text hover:bg-surface-2'
-            }`}
-          >
-            Garage
-          </button>
-          <button
-            onClick={() => {
-              audioEngine.playUiClick();
               onNavigate('leaderboard');
             }}
-            className={`px-3 py-1.5 rounded transition-all ${
+            className={`px-3.5 py-1 rounded-full font-medium transition-all ${
               currentScreen === 'leaderboard'
-                ? 'text-accent bg-accent/10 font-bold'
+                ? 'bg-accent text-white font-semibold shadow-sm shadow-accent/20'
                 : 'text-text-muted hover:text-text hover:bg-surface-2'
             }`}
           >
-            Records
+            Leaderboard
           </button>
         </nav>
 
         {/* Right side: Audio Toggle & Profile */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
           {/* Audio Quick Mute */}
           <button
             onClick={toggleSound}
             title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
-            className="p-2 rounded text-text-muted hover:text-text hover:bg-surface-2 border border-transparent hover:border-border transition-all"
+            className="w-8 h-8 rounded-full flex items-center justify-center text-text-muted hover:text-text bg-surface-2/60 hover:bg-surface-2 border border-border transition-all"
             aria-label="Toggle Sound"
           >
             {isMuted ? (
-              <VolumeX className="w-4 h-4 text-text-faint" />
+              <VolumeX className="w-3.5 h-3.5 text-text-faint" />
             ) : (
-              <Volume2 className="w-4 h-4 text-accent" />
+              <Volume2 className="w-3.5 h-3.5 text-accent" />
             )}
           </button>
 
@@ -131,13 +132,23 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="relative">
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="flex items-center gap-2 py-1 px-2.5 rounded bg-surface-2 hover:bg-surface border border-border text-text transition-colors"
+                className={`flex items-center gap-2 py-1 px-2.5 rounded-full border transition-all text-xs ${
+                  currentScreen === 'profile'
+                    ? 'bg-accent/15 border-accent text-accent'
+                    : 'bg-surface-2/80 hover:bg-surface border-border text-text'
+                }`}
               >
                 <Avatar seed={currentUser.username} size="sm" />
-                <span className="font-display uppercase tracking-wider text-xs font-semibold max-w-[100px] truncate hidden sm:inline-block">
-                  {currentUser.username}
-                </span>
-                <ChevronDown className="w-3.5 h-3.5 text-text-muted" />
+                <div className="flex items-center gap-1.5 text-left hidden sm:flex">
+                  <span className="font-medium text-xs max-w-[100px] truncate">
+                    {currentUser.username}
+                  </span>
+                  <span className="flex items-center gap-0.5 text-[10px] font-mono text-accent font-semibold px-1.5 py-0.5 rounded-full bg-accent/10">
+                    <Zap className="w-2.5 h-2.5" />
+                    {currentUser.points}
+                  </span>
+                </div>
+                <ChevronDown className="w-3 h-3 text-text-muted" />
               </button>
 
               {isDropdownOpen && (
@@ -146,37 +157,61 @@ export const Header: React.FC<HeaderProps> = ({
                     className="fixed inset-0 z-40"
                     onClick={() => setIsDropdownOpen(false)}
                   />
-                  <div className="absolute right-0 mt-2 w-44 bg-surface border border-border-strong rounded-m shadow-2xl py-1 z-50 font-display uppercase tracking-wider text-xs">
+                  <div className="absolute right-0 mt-2 w-52 bg-surface/95 backdrop-blur-md border border-border-strong rounded-xl shadow-2xl py-1 z-50 text-xs">
+                    <div className="px-3.5 py-2.5 border-b border-border">
+                      <div className="font-semibold text-text truncate">{currentUser.username}</div>
+                      <div className="text-[11px] text-accent font-mono flex items-center gap-1 mt-0.5">
+                        <Zap className="w-3 h-3" />
+                        <span>{currentUser.points} Points</span>
+                      </div>
+                    </div>
+
                     <button
                       onClick={() => {
                         audioEngine.playUiClick();
                         setIsDropdownOpen(false);
                         onNavigate('profile');
                       }}
-                      className="w-full flex items-center gap-2 px-3.5 py-2 text-text hover:bg-surface-2 transition-colors text-left"
+                      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-text hover:bg-surface-2 transition-colors text-left"
                     >
                       <User className="w-3.5 h-3.5 text-accent" />
-                      <span>Profile</span>
+                      <span>Profile & Data</span>
                     </button>
+
                     <button
                       onClick={() => {
                         audioEngine.playUiClick();
                         setIsDropdownOpen(false);
                         onNavigate('settings');
                       }}
-                      className="w-full flex items-center gap-2 px-3.5 py-2 text-text hover:bg-surface-2 transition-colors text-left"
+                      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-text hover:bg-surface-2 transition-colors text-left"
                     >
                       <Settings className="w-3.5 h-3.5 text-text-muted" />
                       <span>Settings</span>
                     </button>
+
+                    <button
+                      onClick={() => {
+                        audioEngine.playUiClick();
+                        setIsDropdownOpen(false);
+                        downloadDatabaseFile();
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-text hover:bg-surface-2 transition-colors text-left"
+                      title="Download full SQLite database binary"
+                    >
+                      <Download className="w-3.5 h-3.5 text-accent" />
+                      <span>Export Database</span>
+                    </button>
+
                     <div className="my-1 border-t border-border" />
+
                     <button
                       onClick={() => {
                         audioEngine.playUiClick();
                         setIsDropdownOpen(false);
                         logout();
                       }}
-                      className="w-full flex items-center gap-2 px-3.5 py-2 text-danger hover:bg-surface-2 transition-colors text-left"
+                      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-danger hover:bg-surface-2 transition-colors text-left"
                     >
                       <LogOut className="w-3.5 h-3.5" />
                       <span>Log Out</span>
@@ -191,7 +226,7 @@ export const Header: React.FC<HeaderProps> = ({
                 audioEngine.playUiClick();
                 onOpenAuthModal();
               }}
-              className="px-3.5 py-1.5 rounded bg-surface-2 hover:bg-accent hover:text-accent-contrast border border-border text-text font-display uppercase tracking-wider text-xs font-bold transition-all"
+              className="px-4 py-1.5 rounded-full bg-accent hover:bg-accent-hover text-white text-xs font-semibold shadow-sm shadow-accent/25 transition-all"
             >
               Sign In
             </button>

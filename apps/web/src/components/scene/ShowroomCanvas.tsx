@@ -41,22 +41,22 @@ export const ShowroomCanvas: React.FC<ShowroomCanvasProps> = ({
   return (
     <div className="w-full h-full relative cursor-grab active:cursor-grabbing select-none">
       <Canvas
-        camera={{ position: [0, 5.8, 4.4], fov: 40 }}
+        camera={{ position: [0, 3.8, 5.6], fov: 38 }}
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
         shadows
       >
         {/* PRISTINE STUDIO THREE-POINT LIGHTING */}
-        <ambientLight intensity={0.9} color="#F1F5F9" />
+        <ambientLight intensity={1.1} color="#F8FAFC" />
         <directionalLight
           position={[6, 9, 6]}
-          intensity={2.2}
+          intensity={2.4}
           color="#FFFFFF"
           castShadow
           shadow-mapSize-width={1024}
           shadow-mapSize-height={1024}
         />
-        <directionalLight position={[-6, 7, -5]} intensity={1.2} color="#E2E8F0" />
-        <directionalLight position={[0, -2, 5]} intensity={0.6} color="#CBD5E1" />
+        <directionalLight position={[-6, 7, -5]} intensity={1.3} color="#E2E8F0" />
+        <directionalLight position={[0, -2, 5]} intensity={0.7} color="#CBD5E1" />
         <pointLight position={[0, 4.5, 0]} intensity={1.5} color="#FFFFFF" />
 
         {/* PRISTINE STUDIO PODIUM DISC */}
@@ -95,10 +95,11 @@ export const ShowroomCanvas: React.FC<ShowroomCanvasProps> = ({
 
         {/* INTUITIVE ORBIT CONTROLS */}
         <OrbitControls
+          target={[0, 0.85, 0]}
           enableZoom={false}
           enablePan={false}
-          minPolarAngle={Math.PI / 5}
-          maxPolarAngle={Math.PI / 2.3}
+          minPolarAngle={Math.PI / 6}
+          maxPolarAngle={Math.PI / 2.2}
           autoRotate={false}
         />
       </Canvas>
