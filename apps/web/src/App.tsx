@@ -5,7 +5,6 @@ import { useAuthStore } from './stores/useAuthStore.js';
 import { audioEngine } from './audio/AudioEngine.js';
 
 import { Header } from './components/layout/Header.js';
-import { Footer } from './components/layout/Footer.js';
 
 import { HomeScreen } from './components/screens/HomeScreen.js';
 import { LandingScreen } from './components/screens/LandingScreen.js';
@@ -171,14 +170,6 @@ export const App: React.FC = () => {
           />
         )}
       </main>
-
-      {/* Bottom Footer - hidden during race */}
-      {!isRaceActive && (
-        <Footer
-          currentScreen={currentScreen}
-          onOpenLegal={(tab) => openLegal(tab)}
-        />
-      )}
 
       {/* Global Modals */}
       <AuthModal
