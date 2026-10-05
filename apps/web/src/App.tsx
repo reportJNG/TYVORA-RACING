@@ -30,22 +30,41 @@ export const App: React.FC = () => {
   const { theme, reducedMotion, largeText } = useSettingsStore();
   const { currentUser } = useAuthStore();
 
-  const [currentScreen, setCurrentScreen] = useState<ScreenType>(() => {
-    if (typeof window !== 'undefined' && window.location?.search) {
-      const params = new URLSearchParams(window.location.search);
-      const s = params.get('screen');
-      if (
-        s === 'race' ||
-        s === 'leaderboard' ||
-        s === 'profile' ||
-        s === 'settings' ||
-        s === 'landing'
-      ) {
-        return s as ScreenType;
-      }
+  const getScreenFromUrl = (): ScreenType => {
+    if (typeof window === 'undefined') return 'home';
+    const path = window.location.pathname.replace(/^\/+/, '').toLowerCase();
+    if (path === 'home' || path === '') return 'home';
+    if (path === 'race') return 'race';
+    if (path === 'leaderboard') return 'leaderboard';
+    if (path === 'profile') return 'profile';
+    if (path === 'settings') return 'settings';
+    if (path === 'landing') return 'landing';
+
+    const params = new URLSearchParams(window.location.search);
+    const s = params.get('screen');
+    if (s && ['home', 'race', 'leaderboard', 'profile', 'settings', 'landing'].includes(s)) {
+      return s as ScreenType;
     }
     return 'home';
-  });
+  };
+
+  const [currentScreen, setCurrentScreen] = useState<ScreenType>(getScreenFromUrl);
+
+  const navigateToScreen = (screen: ScreenType) => {
+    setCurrentScreen(screen);
+    if (typeof window !== 'undefined') {
+      const url = screen === 'home' ? '/home' : `/${screen}`;
+      window.history.pushState({ screen }, '', url);
+    }
+  };
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentScreen(getScreenFromUrl());
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalTab, setAuthModalTab] = useState<'signin' | 'signup'>('signin');
@@ -103,7 +122,7 @@ export const App: React.FC = () => {
       {!isRaceActive && (
         <Header
           currentScreen={currentScreen}
-          onNavigate={(screen) => setCurrentScreen(screen as ScreenType)}
+          onNavigate={(screen) => navigateToScreen(screen as ScreenType)}
           onOpenOnlineModal={() => setOnlineModalOpen(true)}
           onOpenAuthModal={() => openAuth('signin')}
         />
@@ -113,11 +132,11 @@ export const App: React.FC = () => {
       <main className="flex-1 flex flex-col relative overflow-hidden">
         {currentScreen === 'home' && (
           <HomeScreen
-            onStartRace={() => setCurrentScreen('race')}
-            onNavigateLeaderboard={() => setCurrentScreen('leaderboard')}
+            onStartRace={() => navigateToScreen('race')}
+            onNavigateLeaderboard={() => navigateToScreen('leaderboard')}
             onNavigateProfile={() => {
               if (currentUser) {
-                setCurrentScreen('profile');
+                navigateToScreen('profile');
               } else {
                 openAuth('signin');
               }
@@ -128,15 +147,15 @@ export const App: React.FC = () => {
 
         {currentScreen === 'landing' && (
           <LandingScreen
-            onPlay={() => setCurrentScreen('race')}
+            onPlay={() => navigateToScreen('race')}
             onLogin={() => openAuth('signin')}
           />
         )}
 
         {currentScreen === 'race' && (
           <RaceScreen
-            onHome={() => setCurrentScreen('home')}
-            onLeaderboard={() => setCurrentScreen('leaderboard')}
+            onHome={() => navigateToScreen('home')}
+            onLeaderboard={() => navigateToScreen('leaderboard')}
             onOpenOnlineModal={() => setOnlineModalOpen(true)}
           />
         )}
@@ -148,7 +167,7 @@ export const App: React.FC = () => {
         {currentScreen === 'settings' && (
           <SettingsScreen
             onOpenLegal={(tab) => openLegal(tab)}
-            onLoggedOut={() => setCurrentScreen('home')}
+            onLoggedOut={() => navigateToScreen('home')}
           />
         )}
       </main>

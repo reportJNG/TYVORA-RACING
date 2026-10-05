@@ -48,8 +48,16 @@ export const Header: React.FC<HeaderProps> = ({
     }
   };
 
+  const isHome = currentScreen === 'home';
+
   return (
-    <header className="sticky top-0 z-40 w-full h-14 bg-bg/85 backdrop-blur-md border-b border-border transition-colors">
+    <header
+      className={`sticky top-0 z-40 w-full h-14 backdrop-blur-xl border-b transition-all ${
+        isHome
+          ? 'bg-[#0B0E14]/40 border-white/10 text-white'
+          : 'bg-bg/85 border-border'
+      }`}
+    >
       <div className="max-w-6xl h-full mx-auto px-4 md:px-8 flex items-center justify-between">
         {/* Brand / Logo: TYVORA */}
         <div

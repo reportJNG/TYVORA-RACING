@@ -373,6 +373,35 @@ class AudioEngine {
     osc.start(now);
     osc.stop(now + 0.03);
   }
+
+  public playEngineRev(): void {
+    if (!this.ctx || !this.uiBus) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    const filter = this.ctx.createBiquadFilter();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(65, now);
+    osc.frequency.exponentialRampToValueAtTime(320, now + 0.35);
+    osc.frequency.exponentialRampToValueAtTime(110, now + 0.7);
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(400, now);
+    filter.frequency.exponentialRampToValueAtTime(2400, now + 0.35);
+    filter.frequency.exponentialRampToValueAtTime(500, now + 0.7);
+
+    gain.gain.setValueAtTime(0.01, now);
+    gain.gain.linearRampToValueAtTime(0.35, now + 0.15);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.75);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.uiBus);
+
+    osc.start(now);
+    osc.stop(now + 0.75);
+  }
 }
 
 export const audioEngine = new AudioEngine();

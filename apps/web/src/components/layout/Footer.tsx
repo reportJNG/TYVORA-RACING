@@ -9,8 +9,16 @@ export interface FooterProps {
 export const Footer: React.FC<FooterProps> = ({ currentScreen, onOpenLegal }) => {
   if (currentScreen === 'race') return null;
 
+  const isHome = currentScreen === 'home';
+
   return (
-    <footer className="w-full py-4 border-t border-border mt-auto text-xs text-text-faint transition-colors select-none">
+    <footer
+      className={`w-full py-4 border-t mt-auto text-xs transition-colors select-none ${
+        isHome
+          ? 'bg-[#0B0E14]/30 border-white/10 text-white/50 backdrop-blur-md'
+          : 'border-border text-text-faint'
+      }`}
+    >
       <div className="max-w-6xl mx-auto px-4 md:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <span className="font-semibold text-text">TYVORA</span>
