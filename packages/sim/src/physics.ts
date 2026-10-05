@@ -9,6 +9,7 @@ import {
   STREAK_BONUS_PER_STEP,
   STREAK_BONUS_MAX,
   MIN_RACE_SPEED,
+  FINISH_RUNOUT_M,
   CarSpec,
 } from './constants.js';
 import { TypingState, burstWpm, liveWpm } from './typing.js';
@@ -20,6 +21,8 @@ export interface RacerSim {
   lane: 'A' | 'B' | 'C'; // A: Rival (left), B: Player (center), C: Pacer (right)
   v: number; // current speed in m/s
   d: number; // current distance along track in meters
+  lat: number; // lateral offset in meters relative to lane center (- = left, + = right)
+  latV: number; // lateral velocity in m/s
   stallUntilMs: number; // timestamp until which acceleration is suppressed
   finishMs: number | null; // race ms when crossing the finish line
   accel: number; // instantaneous physical acceleration in m/s^2 (for smooth suspension animations)
@@ -38,17 +41,52 @@ export function createRacerSim(
     lane,
     v: MIN_RACE_SPEED,
     d: 0,
+    lat: 0,
+    latV: 0,
     stallUntilMs: 0,
     finishMs: null,
     accel: 0,
   };
 }
 
-export function onMistake(r: RacerSim, car: CarSpec, tMs: number): void {
+export function cloneRacerSim(src: RacerSim): RacerSim {
+  return {
+    id: src.id,
+    name: src.name,
+    isPlayer: src.isPlayer,
+    lane: src.lane,
+    v: src.v,
+    d: src.d,
+    lat: src.lat,
+    latV: src.latV,
+    stallUntilMs: src.stallUntilMs,
+    finishMs: src.finishMs,
+    accel: src.accel,
+  };
+}
+
+export function onMistake(r: RacerSim, car: CarSpec, tMs: number, twitchSign: number = 1): void {
   const loss = (1 - MISTAKE_SPEED_MULT) * car.mistakePenaltyScale;
   r.v = Math.max(MIN_RACE_SPEED, r.v * (1 - loss));
   r.stallUntilMs = tMs + MISTAKE_STALL_MS;
   r.accel = -BRAKE_DECEL;
+  // Natural visual jerk/twitch impulse on mistake (smoothly damped back to lane center)
+  r.latV += twitchSign * 1.0;
+}
+
+/**
+ * Critically-damped lateral spring for smooth lane centering, slipstream drift, and bump reaction.
+ */
+export function stepRacerLateral(r: RacerSim, dt: number, targetLat: number = 0): void {
+  const omega = 3.4; // natural spring frequency (rad/s)
+  const error = targetLat - r.lat;
+  const aLat = omega * omega * error - 2.0 * omega * r.latV;
+  r.latV += aLat * dt;
+  // Cap lateral velocity to prevent sudden snapping
+  r.latV = Math.max(-2.8, Math.min(2.8, r.latV));
+  r.lat += r.latV * dt;
+  // Prevent excessive wander off track bounds
+  r.lat = Math.max(-2.2, Math.min(2.2, r.lat));
 }
 
 export function stepCar(
@@ -61,6 +99,9 @@ export function stepCar(
   leadOpponentDistance?: number,
   playerBehindDistance?: number
 ): void {
+  const isComplete = typing.completedAt !== null && typing.W === 0;
+  const isPostFinish = isComplete && r.finishMs !== null && r.d >= targetDistance;
+
   // 1. Calculate typing pace speed:
   // Convert typing pace into a responsive, smooth supercar velocity curve.
   // Sustains momentum between words so the car glides cleanly without start-stop jerking!
@@ -100,9 +141,19 @@ export function stepCar(
   const vTypingTarget = MIN_RACE_SPEED + (car.vMax - MIN_RACE_SPEED) * paceFraction;
 
   let vDes = vTypingTarget;
-  if (typing.completedAt !== null && typing.W === 0) {
+  if (isComplete) {
     // Sprint to the finish line once text is complete
     vDes = car.vMax;
+  }
+
+  // Progress coupling:
+  // Couples car velocity mildly to earned character distance to ensure visual race positions
+  // correspond faithfully to typing progress while keeping motion smooth.
+  if (!isComplete && typing.L > 0 && r.d < targetDistance - 30) {
+    const earnedDistance = (typing.C / typing.L) * targetDistance;
+    const gap = earnedDistance - r.d;
+    const progressFactor = Math.max(-0.6, Math.min(0.4, gap / 60));
+    vDes *= (1 + progressFactor * 0.22);
   }
 
   // 2. Aerodynamic Slipstream / Drafting Mechanic:
@@ -121,7 +172,8 @@ export function stepCar(
   // 3. AI Continuous Rubber-Banding:
   // Smoothly dampens or aids AI velocity to maintain exciting, wheel-to-wheel competitive racing
   // without any binary threshold stuttering or artificial brake spikes!
-  if (!r.isPlayer && playerBehindDistance !== undefined) {
+  // Disabled once the player has crossed the finish line to keep AI finish estimates clean.
+  if (!r.isPlayer && playerBehindDistance !== undefined && r.finishMs === null) {
     const lead = r.d - playerBehindDistance;
     if (lead > 8) {
       // Smoothly attenuate lead as distance grows from 8m to 25m
@@ -149,45 +201,64 @@ export function stepCar(
     aMax *= 1.25;
   }
 
-  // 5. Dual-Regime Speed Integration (Smooth Momentum Coasting vs Firm Braking)
+  // 5. Hold-Line and Run-Out Braking Curves (replaces sudden teleport clamps!)
+  if (!isComplete && r.d >= targetDistance - 35) {
+    // If text is not complete yet, smoothly brake to hold at finish line threshold (D - 2m)
+    const distToHold = Math.max(0, targetDistance - 2 - r.d);
+    const vHoldLimit = Math.sqrt(2 * 18.0 * Math.max(0.01, distToHold));
+    vDes = Math.min(vDes, vHoldLimit);
+  } else if (isPostFinish) {
+    // After crossing finish line, decelerate smoothly to a stop across the 150m run-out area
+    const distToEnd = Math.max(0, targetDistance + FINISH_RUNOUT_M - r.d);
+    const vRunoutLimit = Math.sqrt(2 * 8.0 * Math.max(0.01, distToEnd));
+    vDes = Math.min(vDes, vRunoutLimit);
+  }
+
+  // 6. Dual-Regime Speed Integration (Smooth Momentum Coasting vs Firm Braking)
   const prevV = r.v;
   const dv = vDes - r.v;
   if (dv > 0) {
     r.v += Math.min(dv, aMax * dt);
   } else {
-    // If racer is in mistake penalty or text is complete and past finish:
+    // If racer is in mistake penalty, holding at finish, or decelerating past finish:
     const isStalled = tMs < r.stallUntilMs;
-    const isPostFinish = typing.completedAt !== null && r.d >= targetDistance;
-    const isHardBraking = isStalled || isPostFinish;
+    const isHardBraking = isStalled || (!isComplete && r.d >= targetDistance - 35) || isPostFinish;
 
-    // Gentle COAST_DECEL (3.2 m/s^2) preserves momentum between keystrokes and words.
-    // Firm BRAKE_DECEL (14.0 m/s^2) penalizes mistakes and safely stops past the finish.
     const decelRate = isHardBraking ? BRAKE_DECEL : COAST_DECEL;
     r.v += Math.max(dv, -decelRate * dt);
   }
 
-  // Enforce positive minimum speed during active race (never stops)
-  r.v = Math.max(MIN_RACE_SPEED, r.v);
+  // Enforce positive minimum speed during active race (never stops unless holding at finish or finished)
+  if (!isPostFinish && (isComplete || r.d < targetDistance - 20)) {
+    r.v = Math.max(MIN_RACE_SPEED, r.v);
+  } else {
+    r.v = Math.max(0, r.v);
+  }
 
   // Compute true physical acceleration for suspension pitch/roll/dive
   r.accel = dt > 0 ? (r.v - prevV) / dt : 0;
 
-  // 6. Distance integration
+  // 7. Distance integration
   r.d += r.v * dt;
 
-  // Never advance past finish threshold unless text is complete
-  const isComplete = typing.completedAt !== null && typing.W === 0;
+  // Hard safety limit at finish hold line if text incomplete
   if (!isComplete && r.d >= targetDistance - 2) {
     r.d = targetDistance - 2;
-    r.v = MIN_RACE_SPEED;
+    r.v = Math.min(r.v, 0.2);
     r.accel = 0;
   }
 
-  // 7. Finish detection with sub-tick interpolation once complete
+  // Safety stop at end of run-out
+  if (isPostFinish && r.d >= targetDistance + FINISH_RUNOUT_M) {
+    r.d = targetDistance + FINISH_RUNOUT_M;
+    r.v = 0;
+    r.accel = 0;
+  }
+
+  // 8. Finish detection with sub-tick interpolation once complete
   if (isComplete && r.finishMs === null && r.d >= targetDistance) {
     const over = r.d - targetDistance;
     const speed = Math.max(r.v, 0.001);
     r.finishMs = Math.round(tMs - (over / speed) * 1000);
   }
 }
-

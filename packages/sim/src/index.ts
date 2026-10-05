@@ -6,3 +6,4 @@ export * from './passage.js';
 export * from './typing.js';
 export * from './physics.js';
 export * from './ai.js';
+export * from './race.js';

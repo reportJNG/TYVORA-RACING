@@ -589,3 +589,27 @@ export function createTypingSession(
 ): TypingSession {
   return new TypingSession(targetOrPassage, options);
 }
+
+export function cloneTypingState(src: TypingState): TypingState {
+  return {
+    target: src.target,
+    passage: src.passage,
+    words: src.words,
+    L: src.L,
+    buffer: [...src.buffer],
+    K: src.K,
+    C: src.C,
+    W: src.W,
+    mistakes: src.mistakes,
+    totalKeystrokes: src.totalKeystrokes,
+    correctKeystrokes: src.correctKeystrokes,
+    backspaces: src.backspaces,
+    streak: src.streak,
+    longestStreak: src.longestStreak,
+    completedAt: src.completedAt,
+    correctKeyTimes: [...src.correctKeyTimes],
+    log: [...src.log],
+    smoothedWpm: src.smoothedWpm,
+    autoAdvanceSpace: src.autoAdvanceSpace,
+  };
+}

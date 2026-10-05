@@ -7,22 +7,21 @@ import {
   M,
   RacerSim,
   createRacerSim,
-  stepCar,
-  onMistake,
   generateAiLog,
   AI_DIFFICULTY_PROFILES,
   createTypingState,
   TypingState,
-  onChar,
-  onBackspace,
   KeystrokeEntry,
   Passage,
   passageEngine,
+  RaceEntrant,
 } from '@typerace/sim';
 import { PassageItem } from '../data/passages.js';
 import { audioEngine } from '../audio/AudioEngine.js';
 import { useTypingStore, setTypingMistakeListener } from './useTypingStore.js';
 import { useAuthStore } from './useAuthStore.js';
+import { useSettingsStore } from './useSettingsStore.js';
+import { gameEngine } from '../engine/GameEngine.js';
 
 export type RaceStatus =
   | 'idle'
@@ -115,6 +114,8 @@ function getPassageForRound(difficulty: Difficulty, roundNumber: number, seed?: 
 
 const defaultPassage = passageEngine.getRandomPassage('normal');
 
+let engineUnsubscribers: (() => void)[] = [];
+
 export const useRaceStore = create<RaceStoreState>((set, get) => ({
   status: 'idle',
   currentRound: 1,
@@ -143,19 +144,19 @@ export const useRaceStore = create<RaceStoreState>((set, get) => ({
   selectDifficulty: (difficulty: Difficulty) => set({ difficulty }),
 
   prepareRace: (roundNumber: number = 1) => {
-    const { difficulty, selectedCarId, roundResults } = get();
+    const { difficulty, selectedCarId, selectedTrackId, roundResults } = get();
     const isNewMatch = roundNumber === 1;
     const excludeIds = isNewMatch ? [] : roundResults.map((r: any) => r.passageId).filter(Boolean);
     const passage = getPassageForRound(difficulty, roundNumber, undefined, excludeIds);
     const targetDistance = passage.text.length * M;
 
-    // Initialize player typing state with rich Passage model
+    // Initialize player typing state
     useTypingStore.getState().initPassage(passage);
 
     // Setup Player sim
     const playerSim = createRacerSim('player', 'You', 'B', true);
 
-    // Pick 2 AI cars (the ones not selected by player)
+    // Pick 2 AI cars
     const availableCarIds = Object.keys(CAR_SPECS).filter((id) => id !== selectedCarId);
     const shuffledCars = [...availableCarIds].sort(() => 0.5 - Math.random());
     const rivalCarId = shuffledCars[0] || 'strada-r';
@@ -201,6 +202,80 @@ export const useRaceStore = create<RaceStoreState>((set, get) => ({
       },
     ];
 
+    // Load into decoupled GameEngine
+    const entrants: RaceEntrant[] = [
+      {
+        racer: playerSim,
+        typing: useTypingStore.getState().typingState,
+        car: CAR_SPECS[selectedCarId],
+        script: null,
+        cursor: 0,
+        laneOffset: 0, // Lane B
+        targetWpm: 85,
+        mistakeTwitchSign: 1,
+      },
+      {
+        racer: rivalSim,
+        typing: rivalTyping,
+        car: CAR_SPECS[rivalCarId],
+        script: rivalAi.log,
+        cursor: 0,
+        laneOffset: -3.6, // Lane A
+        targetWpm: profiles.rival.targetWpm,
+        mistakeTwitchSign: -1,
+      },
+      {
+        racer: pacerSim,
+        typing: pacerTyping,
+        car: CAR_SPECS[pacerCarId],
+        script: pacerAi.log,
+        cursor: 0,
+        laneOffset: 3.6, // Lane C
+        targetWpm: profiles.pacer.targetWpm,
+        mistakeTwitchSign: 1,
+      },
+    ];
+
+    // Clean up previous engine event subscriptions
+    engineUnsubscribers.forEach((unsub) => unsub());
+    engineUnsubscribers = [];
+
+    const settings = useSettingsStore.getState();
+    gameEngine.loadRace(selectedTrackId, targetDistance, entrants, {
+      screenShake: settings.screenShake,
+      reducedMotion: settings.reducedMotion,
+    });
+
+    // Wire up engine event listeners to high-level store states
+    const unsubCountdown = gameEngine.eventBus.on('countdown', ({ count }) => {
+      set({ countdownValue: count });
+      audioEngine.playCountdownBeep(false);
+    });
+
+    const unsubGo = gameEngine.eventBus.on('go', () => {
+      set({ countdownValue: 0, status: 'racing', raceTimeMs: 0 });
+      audioEngine.playCountdownBeep(true);
+    });
+
+    const unsubFinish = gameEngine.eventBus.on('playerFinish', () => {
+      get().finishCurrentRound();
+    });
+
+    // Wire up imperative audio updates (RPM pitch & roar) on frame
+    let lastAudioUpdate = 0;
+    const unsubFrame = gameEngine.onFrame((engine) => {
+      const now = performance.now();
+      if (now - lastAudioUpdate > 30) {
+        lastAudioUpdate = now;
+        const playerView = engine.view.racers[0];
+        if (playerView) {
+          audioEngine.updateEngineRpm(playerView.speedKmh, playerView.accel > 0.3);
+        }
+      }
+    });
+
+    engineUnsubscribers.push(unsubCountdown, unsubGo, unsubFinish, unsubFrame);
+
     set({
       status: 'idle',
       currentRound: roundNumber,
@@ -223,111 +298,46 @@ export const useRaceStore = create<RaceStoreState>((set, get) => ({
     audioEngine.startEngine();
     audioEngine.playCountdownBeep(false);
 
-    let count = 3;
-    const interval = setInterval(() => {
-      count -= 1;
-      if (count > 0) {
-        set({ countdownValue: count });
-        audioEngine.playCountdownBeep(false);
-      } else if (count === 0) {
-        set({ countdownValue: 0, status: 'racing', raceTimeMs: 0 });
-        audioEngine.playCountdownBeep(true);
-      } else {
-        clearInterval(interval);
-      }
-    }, 1000);
+    gameEngine.startCountdown();
   },
 
   pauseRace: () => {
     if (get().status === 'racing') {
+      gameEngine.pause();
       set({ status: 'paused' });
     }
   },
 
   resumeRace: () => {
     if (get().status === 'paused') {
+      gameEngine.resume();
       set({ status: 'racing' });
     }
   },
 
   handleMistake: () => {
-    const { status, playerSim, selectedCarId, raceTimeMs } = get();
-    if (status !== 'racing') return;
-    const playerCar = CAR_SPECS[selectedCarId];
-    onMistake(playerSim, playerCar, raceTimeMs);
+    gameEngine.handleMistake();
   },
 
-  tickRace: (deltaMs: number) => {
-    const { status, raceTimeMs, raceDistance, playerSim, selectedCarId, opponents } = get();
-    if (status !== 'racing') return;
-
-    const dt = deltaMs / 1000;
-    const nextTimeMs = raceTimeMs + deltaMs;
-    const typingState = useTypingStore.getState().typingState;
-    const playerCar = CAR_SPECS[selectedCarId];
-
-    // Compute lead opponent distance for slipstream draft mechanic
-    let leadOpponentDistance = 0;
-    for (const opp of opponents) {
-      if (opp.racer.finishMs === null && opp.racer.d > leadOpponentDistance) {
-        leadOpponentDistance = opp.racer.d;
-      }
-    }
-
-    // Step player car physics with dt and slipstream draft awareness
-    stepCar(playerSim, typingState, playerCar, nextTimeMs, dt, raceDistance, leadOpponentDistance);
-
-    // Update audio engine pitch with current player speed & acceleration roar
-    audioEngine.updateEngineRpm(playerSim.v * 3.6, (playerSim.accel ?? 0) > 0.3);
-
-    // Step AI opponents with rubber-band awareness of player position
-    for (const opp of opponents) {
-      if (opp.racer.finishMs === null) {
-        // Apply AI keystrokes up to nextTimeMs
-        while (opp.log.length > 0 && opp.log[0][0] <= nextTimeMs) {
-          const entry = opp.log.shift()!;
-          if (entry[1] === 'BS') {
-            onBackspace(opp.typing, entry[0]);
-          } else {
-            onChar(opp.typing, entry[1], entry[0]);
-          }
-        }
-        stepCar(opp.racer, opp.typing, opp.car, nextTimeMs, dt, raceDistance, undefined, playerSim.d);
-      }
-    }
-
-    // Update state
-    set({
-      raceTimeMs: nextTimeMs,
-      playerSim: { ...playerSim },
-      opponents: [...opponents],
-    });
-
-    // Check round completion condition
-    if (playerSim.finishMs !== null && status === 'racing') {
-      get().finishCurrentRound();
+  tickRace: (_deltaMs: number) => {
+    // Engine now ticks independently via requestAnimationFrame in EngineDriver.
+    // Backward compatibility hook:
+    if (gameEngine.phase === 'racing' || gameEngine.phase === 'cooldown') {
+      gameEngine.frame(performance.now());
     }
   },
 
   finishCurrentRound: () => {
-    const { currentRound, totalRounds, raceTimeMs, playerSim, opponents, currentPassage, roundResults } = get();
+    const { currentRound, totalRounds, playerSim, opponents, currentPassage, roundResults, raceDistance } = get();
     const typingState = useTypingStore.getState().typingState;
+    const raceTimeMs = gameEngine.clock.raceTimeMs;
 
-    // Fast-forward any unfinished AI
-    for (const opp of opponents) {
-      if (opp.racer.finishMs === null) {
-        while (opp.log.length > 0) {
-          const entry = opp.log.shift()!;
-          if (entry[1] === 'BS') {
-            onBackspace(opp.typing, entry[0]);
-          } else {
-            onChar(opp.typing, entry[1], entry[0]);
-          }
-        }
-        const finishSec = ((typingState.L / 5) / opp.targetWpm) * 60;
-        opp.racer.finishMs = Math.round(finishSec * 1000);
-      }
-    }
+    // Fast-forward any unfinished AI using deterministic engine estimates
+    opponents.forEach((opp, idx) => {
+      const entrantIdx = idx + 1;
+      const finishMs = gameEngine.sim.estimateFinishMs(entrantIdx, raceTimeMs, raceDistance);
+      opp.racer.finishMs = finishMs;
+    });
 
     const playerTimeMs = playerSim.finishMs ?? raceTimeMs;
     const playerTimeSec = Number((playerTimeMs / 1000).toFixed(2));
