@@ -1,6 +1,6 @@
 // apps/web/src/engine/render/TrackWorldBuilder.ts
 import * as THREE from 'three';
-import { TrackPath, createEmptyTrackPose, TrackPose } from '../track/TrackPath.js';
+import { TrackPath, createEmptyTrackPose } from '../track/TrackPath.js';
 import { GeometryBatcher } from './GeometryBatcher.js';
 
 export interface WorldChunk {
@@ -93,27 +93,6 @@ export function buildTrackWorld(path: TrackPath): BuiltWorld {
       path.sample(d2, 0, scratchPose2);
 
       const halfW = roadWidth * 0.5;
-      const left1: [number, number, number] = [
-        scratchPose1.x + scratchPose1.normX * halfW,
-        scratchPose1.y,
-        scratchPose1.z + scratchPose1.normZ * halfW,
-      ];
-      const right1: [number, number, number] = [
-        scratchPose1.x - scratchPose1.normX * halfW,
-        scratchPose1.y,
-        scratchPose1.z - scratchPose1.normZ * halfW,
-      ];
-      const left2: [number, number, number] = [
-        scratchPose2.x + scratchPose2.normX * halfW,
-        scratchPose2.y,
-        scratchPose2.z + scratchPose2.normZ * halfW,
-      ];
-      const right2: [number, number, number] = [
-        scratchPose2.x - scratchPose2.normX * halfW,
-        scratchPose2.y,
-        scratchPose2.z - scratchPose2.normZ * halfW,
-      ];
-
       // Road segment box (ribbon with small vertical depth)
       const midPos: [number, number, number] = [
         (scratchPose1.x + scratchPose2.x) * 0.5,

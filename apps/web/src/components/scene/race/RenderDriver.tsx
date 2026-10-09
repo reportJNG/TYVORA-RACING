@@ -8,7 +8,7 @@ import { gameEngine } from '../../../engine/GameEngine.js';
  */
 export const RenderDriver: React.FC = () => {
   useFrame(({ gl }) => {
-    gameEngine.perf.recordRender(gl.info.render.calls, gl.info.render.triangles);
+    gameEngine.perf.recordRendererInfo(gl.info.render.calls, gl.info.render.triangles);
   }, 1000);
 
   return null;

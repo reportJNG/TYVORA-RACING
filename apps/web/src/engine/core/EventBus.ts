@@ -14,7 +14,7 @@ export type EventCallback<T> = (payload: T) => void;
 
 export class EventBus {
   private listeners: {
-    [K in keyof EngineEventMap]?: Set<EventCallback<EngineEventMap[K]>>;
+    [K in keyof EngineEventMap]?: Set<EventCallback<any>>;
   } = {};
 
   public on<K extends keyof EngineEventMap>(

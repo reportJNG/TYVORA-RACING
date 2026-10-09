@@ -12,8 +12,8 @@ export const CameraBinding: React.FC = () => {
 
   useFrame(() => {
     const c = gameEngine.view.camera;
-    camera.position.set(c.x, c.y, c.z);
-    camera.lookAt(c.lookX, c.lookY, c.lookZ);
+    camera.position.set(c.posX, c.posY, c.posZ);
+    camera.lookAt(c.targetX, c.targetY, c.targetZ);
 
     const persp = camera as THREE.PerspectiveCamera;
     if (persp.isPerspectiveCamera && Math.abs(persp.fov - c.fov) > 0.01) {
