@@ -13,6 +13,8 @@ import {
   SlidersHorizontal,
   X,
   Check,
+  Clock,
+  Trophy,
 } from 'lucide-react';
 import { useRaceStore } from '../../stores/useRaceStore.js';
 import { useAuthStore } from '../../stores/useAuthStore.js';
@@ -47,6 +49,7 @@ export const RaceScreen: React.FC<RaceScreenProps> = ({
     selectedTrackId,
     difficulty,
     botCount,
+    raceTimeMs,
     selectCar,
     selectTrack,
     selectDifficulty,
@@ -187,8 +190,6 @@ export const RaceScreen: React.FC<RaceScreenProps> = ({
   for (const opp of opponents) {
     if (opp.racer.d > playerD) rank++;
   }
-  const posLabel =
-    rank === 1 ? '1ST' : rank === 2 ? '2ND' : rank === 3 ? '3RD' : `${rank}TH`;
 
   // Overtake feedback notification during active race
   useEffect(() => {
@@ -205,6 +206,15 @@ export const RaceScreen: React.FC<RaceScreenProps> = ({
   // Selected track details
   const activeTrack = TRACKS_DATA[selectedTrackId] || TRACKS_LIST[0];
 
+  // Helper format for live clock in racing view
+  const formatRaceClock = (ms: number) => {
+    const s = Math.floor(ms / 1000);
+    const m = Math.floor(s / 60);
+    const remS = s % 60;
+    const tenths = Math.floor((ms % 1000) / 100);
+    return `${m.toString().padStart(2, '0')}:${remS.toString().padStart(2, '0')}.${tenths}`;
+  };
+
   // =========================================================================
   // VIEW A: PRE-RACE HANGAR / CAR SHOWROOM (MINIMAL & ULTRA-POLISHED UI/UX)
   // =========================================================================
@@ -219,7 +229,7 @@ export const RaceScreen: React.FC<RaceScreenProps> = ({
         <header className="relative z-20 max-w-5xl w-full mx-auto flex items-center justify-between">
           <button
             onClick={onHome}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface/75 hover:bg-surface border border-white/10 hover:border-white/20 text-text-muted hover:text-white transition-all text-xs font-mono backdrop-blur-md cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-surface/75 hover:bg-surface border border-white/10 hover:border-white/20 text-white/70 hover:text-white transition-all text-xs font-mono backdrop-blur-md cursor-pointer"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>HOME</span>
@@ -227,10 +237,10 @@ export const RaceScreen: React.FC<RaceScreenProps> = ({
 
           {/* Center: Vehicle Name & Category Pill */}
           <div className="flex items-center gap-2.5">
-            <h1 className="font-display font-extrabold text-base sm:text-xl tracking-tight text-white uppercase drop-shadow-sm">
+            <h1 className="font-display font-black text-lg sm:text-2xl tracking-tight text-white uppercase drop-shadow-sm">
               {currentCar.name}
             </h1>
-            <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase tracking-wider bg-white/10 border border-white/15 text-accent">
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-white/10 border border-white/15 text-accent">
               {currentCar.category}
             </span>
           </div>
@@ -268,20 +278,21 @@ export const RaceScreen: React.FC<RaceScreenProps> = ({
             <ChevronRight className="w-5 h-5" />
           </button>
 
-          {/* Floating Minimal Vehicle Specs Overlay (Bottom of 3D Canvas) */}
-          <div className="absolute bottom-2 inset-x-0 flex items-center justify-center gap-6 text-xs font-mono pointer-events-none">
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/60 border border-white/10 backdrop-blur-md text-white/80">
+          {/* Floating Vehicle Specs Overlay (Bottom of 3D Canvas) */}
+          <div className="absolute bottom-2 inset-x-0 flex items-center justify-center gap-3 sm:gap-6 text-xs font-mono pointer-events-none">
+            <div className="flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#0A0E18]/85 border border-white/12 backdrop-blur-md text-white">
               <Gauge className="w-3.5 h-3.5 text-accent" />
               <span>{currentCar.displaySpecs.topSpeedKph} KM/H</span>
             </div>
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/60 border border-white/10 backdrop-blur-md">
+
+            <div className="flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#0A0E18]/85 border border-white/12 backdrop-blur-md">
               {isCurrentCarUnlocked ? (
-                <span className="flex items-center gap-1 text-emerald-400 font-semibold">
-                  <Unlock className="w-3 h-3" /> READY
+                <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                  <Unlock className="w-3.5 h-3.5" /> READY TO DRIVE
                 </span>
               ) : (
-                <span className="flex items-center gap-1 text-danger font-semibold">
-                  <Lock className="w-3 h-3" /> {pointsRemaining} PTS NEEDED
+                <span className="flex items-center gap-1.5 text-danger font-bold">
+                  <Lock className="w-3.5 h-3.5" /> {pointsRemaining} PTS NEEDED
                 </span>
               )}
             </div>
@@ -291,7 +302,7 @@ export const RaceScreen: React.FC<RaceScreenProps> = ({
         {/* 3. BOTTOM CONTROL CONSOLE: MODE SELECTION & QUICK CAR SWITCHER */}
         <footer className="relative z-20 max-w-2xl w-full mx-auto flex flex-col items-center space-y-4">
           {/* Main Action Deck: PLAY OFFLINE & PLAY ONLINE */}
-          <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             {/* Play Offline Button */}
             <button
               onClick={handleOpenOfflineSetup}
@@ -305,7 +316,7 @@ export const RaceScreen: React.FC<RaceScreenProps> = ({
               <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/25 to-transparent pointer-events-none" />
               <Play className="w-4 h-4 fill-current" />
               <span>PLAY OFFLINE</span>
-              <span className="ml-1 text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/35 border border-white/20 font-bold uppercase">
+              <span className="ml-1 text-[10px] font-mono px-2 py-0.5 rounded bg-black/35 border border-white/20 font-bold uppercase">
                 SOLO
               </span>
             </button>
@@ -317,8 +328,8 @@ export const RaceScreen: React.FC<RaceScreenProps> = ({
             >
               <Radio className="w-4 h-4 text-cyan-400 animate-pulse" />
               <span>PLAY ONLINE</span>
-              <span className="ml-1 text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-400/20 text-cyan-300 border border-cyan-400/30 font-bold uppercase">
-                RADAR
+              <span className="ml-1 text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-400/20 text-cyan-300 border border-cyan-400/30 font-bold uppercase">
+                MATCH
               </span>
             </button>
           </div>
@@ -519,9 +530,9 @@ export const RaceScreen: React.FC<RaceScreenProps> = ({
 
       {/* OVERTAKE FLASH NOTIFICATION */}
       {overtakeNotice && (
-        <div className="absolute top-12 left-1/2 -translate-x-1/2 z-30 pointer-events-none animate-in fade-in slide-in-from-top-2 duration-200">
-          <div className="px-3.5 py-1 rounded-full bg-black/60 border border-accent/60 backdrop-blur-md text-[10px] font-bold uppercase tracking-widest text-accent shadow-[0_0_16px_rgba(255,75,38,0.35)] flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-accent animate-ping" />
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-30 pointer-events-none animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="px-4 py-1.5 rounded-full bg-black/75 border border-accent/60 backdrop-blur-md text-[11px] font-bold uppercase tracking-widest text-accent shadow-[0_0_20px_rgba(255,75,38,0.4)] flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-accent animate-ping" />
             <span>{overtakeNotice}</span>
           </div>
         </div>
@@ -529,18 +540,44 @@ export const RaceScreen: React.FC<RaceScreenProps> = ({
 
       {/* MINIMAL TOP BAR: CLEAN ESC & POSITION / ROUND STATUS */}
       <div className="absolute top-3 inset-x-0 z-20 flex items-center justify-between px-5 pointer-events-none">
+        {/* Left: ESC // PAUSE */}
         <button
           onClick={pauseRace}
-          className="pointer-events-auto text-[10px] font-mono uppercase tracking-widest text-white/60 hover:text-white px-2 py-1 rounded bg-black/40 backdrop-blur-md border border-white/10 transition-colors cursor-pointer"
+          className="pointer-events-auto text-[10px] font-mono uppercase tracking-widest text-white/70 hover:text-white px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/12 transition-all cursor-pointer flex items-center gap-1.5"
         >
-          ESC // PAUSE
+          <span>ESC</span>
+          <span className="text-white/30">//</span>
+          <span>PAUSE</span>
         </button>
 
+        {/* Center: Live Match Clock */}
+        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/60 border border-white/12 backdrop-blur-md font-mono text-xs text-white/90 tabular-nums pointer-events-auto">
+          <Clock className="w-3 h-3 text-accent" />
+          <span>{formatRaceClock(raceTimeMs)}</span>
+        </div>
+
+        {/* Right: Position & Round */}
         <div className="flex items-center gap-2 pointer-events-auto">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-accent px-2.5 py-0.5 rounded bg-black/40 backdrop-blur-md border border-accent/30 shadow-[0_0_12px_rgba(255,75,38,0.2)]">
-            {posLabel}
-          </span>
-          <span className="text-[10px] font-mono uppercase tracking-widest text-white/60 px-2 py-0.5 rounded bg-black/40 backdrop-blur-md border border-white/10">
+          {rank === 1 ? (
+            <span className="text-[11px] font-mono font-black uppercase tracking-wider text-amber-300 px-3 py-0.5 rounded-full bg-amber-400/20 border border-amber-400/50 shadow-[0_0_15px_rgba(251,191,36,0.35)] flex items-center gap-1">
+              <Trophy className="w-3 h-3 text-amber-300" />
+              <span>P1 // LEAD</span>
+            </span>
+          ) : rank === 2 ? (
+            <span className="text-[11px] font-mono font-black uppercase tracking-wider text-cyan-300 px-3 py-0.5 rounded-full bg-cyan-400/20 border border-cyan-400/50 shadow-[0_0_12px_rgba(6,182,212,0.3)]">
+              P2
+            </span>
+          ) : rank === 3 ? (
+            <span className="text-[11px] font-mono font-black uppercase tracking-wider text-amber-400 px-3 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/50 shadow-[0_0_12px_rgba(245,158,11,0.3)]">
+              P3
+            </span>
+          ) : (
+            <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-white/80 px-2.5 py-0.5 rounded-full bg-black/60 border border-white/20">
+              P{rank}
+            </span>
+          )}
+
+          <span className="text-[10px] font-mono uppercase tracking-widest text-white/70 px-2.5 py-0.5 rounded-full bg-black/60 backdrop-blur-md border border-white/12">
             R{currentRound}/{totalRounds}
           </span>
         </div>

@@ -45,47 +45,56 @@ export const ShowroomCanvas: React.FC<ShowroomCanvasProps> = ({
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
         shadows
       >
-        {/* PRISTINE STUDIO THREE-POINT LIGHTING */}
-        <ambientLight intensity={1.1} color="#F8FAFC" />
+        {/* CINEMATIC THREE-POINT SHOWROOM LIGHTING */}
+        <ambientLight intensity={0.9} color="#94A3B8" />
         <directionalLight
           position={[6, 9, 6]}
-          intensity={2.4}
+          intensity={2.8}
           color="#FFFFFF"
           castShadow
           shadow-mapSize-width={1024}
           shadow-mapSize-height={1024}
         />
-        <directionalLight position={[-6, 7, -5]} intensity={1.3} color="#E2E8F0" />
-        <directionalLight position={[0, -2, 5]} intensity={0.7} color="#CBD5E1" />
-        <pointLight position={[0, 4.5, 0]} intensity={1.5} color="#FFFFFF" />
+        <directionalLight position={[-6, 7, -5]} intensity={1.6} color="#38BDF8" />
+        <directionalLight position={[0, -2, 5]} intensity={0.6} color="#1E293B" />
+        <pointLight position={[0, 4.5, 0]} intensity={1.8} color="#FF6B4A" />
 
-        {/* PRISTINE STUDIO PODIUM DISC */}
+        {/* HIGH-TECH OBSIDIAN TURNTABLE PODIUM */}
         <group position={[0, -0.01, 0]}>
-          {/* Main turntable platform */}
+          {/* Main obsidian glass turntable platform */}
           <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-            <circleGeometry args={[5.2, 64]} />
+            <circleGeometry args={[4.8, 64]} />
             <meshStandardMaterial
-              color="#F8FAFC"
-              roughness={0.18}
-              metalness={0.12}
-            />
-          </mesh>
-          {/* Outer beveled brushed metallic edge ring */}
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]}>
-            <ringGeometry args={[5.2, 5.5, 64]} />
-            <meshStandardMaterial
-              color="#94A3B8"
-              metalness={0.88}
+              color="#0B0F19"
               roughness={0.2}
+              metalness={0.8}
             />
           </mesh>
-          {/* Ambient studio halo rim */}
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.03, 0]}>
-            <ringGeometry args={[5.5, 7.0, 64]} />
+          {/* Glowing neon accent halo ring */}
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.002, 0]}>
+            <ringGeometry args={[4.75, 4.88, 64]} />
             <meshBasicMaterial
-              color="#E2E8F0"
+              color="#FF4B26"
               transparent
-              opacity={0.4}
+              opacity={0.85}
+            />
+          </mesh>
+          {/* Outer brushed titanium edge ring */}
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
+            <ringGeometry args={[4.88, 5.4, 64]} />
+            <meshStandardMaterial
+              color="#1E293B"
+              metalness={0.9}
+              roughness={0.3}
+            />
+          </mesh>
+          {/* Ambient soft glow ground falloff */}
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]}>
+            <ringGeometry args={[5.4, 6.8, 64]} />
+            <meshBasicMaterial
+              color="#FF4B26"
+              transparent
+              opacity={0.08}
             />
           </mesh>
         </group>

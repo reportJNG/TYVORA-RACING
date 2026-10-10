@@ -11,25 +11,51 @@ export const CountdownOverlay: React.FC = () => {
   if (status !== 'countdown') return null;
 
   return (
-    <div className="fixed inset-0 z-30 flex items-center justify-center pointer-events-none select-none">
-      <div className="flex flex-col items-center animate-scaleUp">
-        <span className="font-display font-bold text-sm md:text-base uppercase tracking-widest text-accent bg-accent/15 border border-accent/30 px-3 py-1 rounded-full mb-3 shadow-[0_0_15px_rgba(255,85,28,0.3)]">
-          ROUND {currentRound} / {totalRounds}
-        </span>
-
-        {countdownValue > 0 ? (
-          <>
-            <span className="font-display font-bold text-2xl uppercase tracking-widest text-text-muted mb-2">
-              READY
-            </span>
-            <span className="font-display font-bold text-8xl md:text-9xl text-text leading-none drop-shadow-[0_10px_30px_rgba(0,0,0,0.85)]">
-              {countdownValue}
-            </span>
-          </>
-        ) : (
-          <span className="font-display font-bold text-8xl md:text-9xl text-accent leading-none drop-shadow-[0_0_40px_rgba(255,85,28,0.85)] animate-pulse">
-            GO!
+    <div className="fixed inset-0 z-40 flex items-center justify-center pointer-events-none select-none bg-black/35 backdrop-blur-[2px]">
+      <div className="flex flex-col items-center animate-in zoom-in-75 duration-200">
+        {/* Round Badge */}
+        <div className="flex items-center gap-2 px-4 py-1 rounded-full bg-[#0B0F19]/90 border border-accent/40 shadow-[0_0_20px_rgba(255,75,38,0.35)] mb-4">
+          <span className="w-2 h-2 rounded-full bg-accent animate-ping" />
+          <span className="font-mono text-xs sm:text-sm font-bold uppercase tracking-widest text-white">
+            ROUND {currentRound} OF {totalRounds}
           </span>
+        </div>
+
+        {/* Start Gantry Lights */}
+        <div className="flex items-center gap-3 mb-6 p-2.5 rounded-2xl bg-black/75 border border-white/15 backdrop-blur-md shadow-2xl">
+          {[1, 2, 3].map((num) => {
+            const isLit = countdownValue <= 3 - num;
+            return (
+              <div
+                key={num}
+                className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full border-2 transition-all duration-150 ${
+                  isLit
+                    ? countdownValue === 0
+                      ? 'bg-emerald-400 border-emerald-300 shadow-[0_0_20px_rgba(52,211,153,0.9)]'
+                      : 'bg-accent border-accent-hover shadow-[0_0_20px_rgba(255,75,38,0.9)]'
+                    : 'bg-black/60 border-white/10 opacity-35'
+                }`}
+              />
+            );
+          })}
+        </div>
+
+        {/* Giant Countdown Digit / GO */}
+        {countdownValue > 0 ? (
+          <div className="text-center">
+            <div className="font-mono text-xs sm:text-sm font-extrabold uppercase tracking-widest text-white/50 mb-1">
+              GET READY
+            </div>
+            <div className="font-display font-black text-8xl sm:text-9xl text-white leading-none drop-shadow-[0_15px_40px_rgba(0,0,0,0.9)] scale-110 transition-transform">
+              {countdownValue}
+            </div>
+          </div>
+        ) : (
+          <div className="text-center animate-in zoom-in-90 duration-150">
+            <div className="font-display font-black text-8xl sm:text-9xl text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-200 leading-none filter drop-shadow-[0_0_50px_rgba(52,211,153,0.9)]">
+              GO!
+            </div>
+          </div>
         )}
       </div>
     </div>
