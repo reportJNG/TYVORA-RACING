@@ -18,6 +18,7 @@ import { HomeScreen } from './components/screens/HomeScreen.js';
 import { LandingScreen } from './components/screens/LandingScreen.js';
 import { RaceModeSelectScreen } from './components/screens/RaceModeSelectScreen.js';
 import { GarageScreen } from './components/screens/GarageScreen.js';
+import { MapsScreen } from './components/screens/MapsScreen.js';
 import { RacePlayingScreen } from './components/screens/RacePlayingScreen.js';
 import { LeaderboardScreen } from './components/screens/LeaderboardScreen.js';
 import { ProfileScreen } from './components/screens/ProfileScreen.js';
@@ -149,6 +150,9 @@ const AppContent: React.FC = () => {
 
           {/* Dedicated Showroom & Garage Route */}
           <Route path="/race/garage" element={<GarageScreen />} />
+
+          {/* Dedicated Circuit Maps Explorer Route */}
+          <Route path="/race/maps" element={<MapsScreen />} />
 
           {/* Dedicated Active Race Playing Routes */}
           <Route path="/race/playing" element={<RacePlayingScreen />} />

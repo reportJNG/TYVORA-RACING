@@ -188,7 +188,18 @@ export const RaceModeSelectScreen: React.FC = () => {
             <div className="p-3.5 rounded-2xl bg-black/40 border border-white/8 space-y-2 text-xs font-mono">
               <div className="flex items-center justify-between">
                 <span className="text-white/50">CIRCUIT</span>
-                <span className="text-white font-bold">{currentTrack.name}</span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    audioEngine.playUiClick();
+                    navigate('/race/maps');
+                  }}
+                  className="text-white hover:text-accent font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <span>{currentTrack.name}</span>
+                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-white/10 text-accent">CHANGE</span>
+                </button>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-white/50">DIFFICULTY</span>
