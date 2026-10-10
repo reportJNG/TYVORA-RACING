@@ -625,6 +625,56 @@ class SQLiteService {
     return newlyUnlocked;
   }
 
+  buyCar(
+    userId: string,
+    carId: string
+  ): { success: boolean; error?: string; remainingPoints?: number; car?: CarVisualConfig } {
+    if (!this.db) {
+      return { success: false, error: 'Database not initialized' };
+    }
+    const targetCar = CARS_LIST.find((c) => c.id === carId);
+    if (!targetCar) {
+      return { success: false, error: 'Vehicle not found' };
+    }
+    const unlocked = this.getUnlockedCarIds(userId);
+    if (unlocked.includes(carId)) {
+      return {
+        success: true,
+        remainingPoints: this.getUserById(userId)?.points || 0,
+        car: targetCar,
+      };
+    }
+
+    const user = this.getUserById(userId);
+    if (!user) {
+      return { success: false, error: 'User not found' };
+    }
+
+    if (user.points < targetCar.unlockPoints) {
+      return {
+        success: false,
+        error: `Insufficient points. Requires ${targetCar.unlockPoints} PTS, current balance is ${user.points} PTS.`,
+      };
+    }
+
+    const newPoints = user.points - targetCar.unlockPoints;
+    const now = new Date().toISOString();
+
+    this.db.run('UPDATE users SET points = ? WHERE id = ?', [newPoints, userId]);
+    this.db.run(
+      'INSERT OR IGNORE INTO unlocked_cars (user_id, car_id, unlocked_at) VALUES (?, ?, ?)',
+      [userId, carId, now]
+    );
+
+    this.schedulePersist();
+
+    return {
+      success: true,
+      remainingPoints: newPoints,
+      car: targetCar,
+    };
+  }
+
   // -------------------------------------------------------------
   // RACE TELEMETRY & RECORDS
   // -------------------------------------------------------------

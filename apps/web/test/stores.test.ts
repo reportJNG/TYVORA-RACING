@@ -274,5 +274,54 @@ describe('Web Stores & Game Configuration', () => {
     const restoredUser = sqliteService.getUserById(userId);
     expect(restoredUser?.username).toBe(testUsername);
     expect(restoredUser?.points).toBe(raceRes.newTotalPoints);
+
+    // Test explicit car purchasing:
+    // Give user 1500 points to buy meridian-gt (requires 1400 pts)
+    const pointsBefore = restoredUser?.points || 0;
+    const buyResult = sqliteService.buyCar(userId, 'meridian-gt');
+    // If not enough points, should fail gracefully
+    if (pointsBefore < 1400) {
+      expect(buyResult.success).toBe(false);
+    }
+  });
+
+  it('allows explicit car purchasing with user points balance', async () => {
+    const { sqliteService } = await import('../src/db/sqlite.js');
+    await sqliteService.init();
+
+    const username = 'BuyerRacer' + Date.now();
+    const signup = sqliteService.signup(username, `${username}@test.dev`, 'pass');
+    const uid = signup.user!.id;
+
+    // Award 2000 points via winning race
+    sqliteService.recordRace({
+      userId: uid,
+      isWin: true,
+      timeSeconds: 15.0,
+      wpm: 120,
+      accuracy: 100,
+      mistakes: 0,
+      carId: 'scrapper-rust',
+      difficulty: 'hard',
+      counted: true,
+    });
+
+    const userBefore = sqliteService.getUserById(uid);
+    expect(userBefore?.points).toBeGreaterThanOrEqual(150);
+
+    // Manually top up to 2500 for testing
+    const db = (sqliteService as any).db;
+    db.run('UPDATE users SET points = 2500 WHERE id = ?', [uid]);
+
+    // Buy meridian-gt (1400 pts)
+    const res = sqliteService.buyCar(uid, 'meridian-gt');
+    expect(res.success).toBe(true);
+    expect(res.remainingPoints).toBe(2500 - 1400);
+
+    const unlocked = sqliteService.getUnlockedCarIds(uid);
+    expect(unlocked).toContain('meridian-gt');
+
+    const userAfter = sqliteService.getUserById(uid);
+    expect(userAfter?.points).toBe(1100);
   });
 });

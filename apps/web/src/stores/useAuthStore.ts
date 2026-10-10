@@ -73,6 +73,7 @@ export interface AuthState {
     counted: boolean;
   }) => { newBests: string[]; pointsEarned: number; newlyUnlockedCars: CarVisualConfig[] };
   clearUnlockNotification: () => void;
+  buyCar: (carId: string) => Promise<{ success: boolean; error?: string }>;
 
   // Data persistence & backup actions
   downloadDatabaseFile: () => void;
@@ -321,6 +322,17 @@ export const useAuthStore = create<AuthState>((set, get) => {
 
     clearUnlockNotification: () => {
       set({ newlyUnlockedCar: null });
+    },
+
+    buyCar: async (carId: string) => {
+      const user = get().currentUser || DEFAULT_USER;
+      await sqliteService.init();
+      const res = sqliteService.buyCar(user.id, carId);
+      if (!res.success) {
+        return { success: false, error: res.error || 'Failed to purchase vehicle' };
+      }
+      get().refreshFromDb();
+      return { success: true };
     },
 
     downloadDatabaseFile: () => {
