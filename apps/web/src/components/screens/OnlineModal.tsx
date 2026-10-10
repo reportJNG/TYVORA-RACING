@@ -9,12 +9,14 @@ export interface OnlineModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialSearching?: boolean;
+  onMatchFound?: (roomId: string) => void;
 }
 
 export const OnlineModal: React.FC<OnlineModalProps> = ({
   isOpen,
   onClose,
   initialSearching = false,
+  onMatchFound,
 }) => {
   const [isSearching, setIsSearching] = useState(initialSearching);
   const [searchTimer, setSearchTimer] = useState(0);
@@ -29,13 +31,26 @@ export const OnlineModal: React.FC<OnlineModalProps> = ({
     let interval: any;
     if (isSearching) {
       interval = setInterval(() => {
-        setSearchTimer((prev) => prev + 1);
+        setSearchTimer((prev) => {
+          if (prev >= 2) {
+            clearInterval(interval);
+            const roomId = 'room-' + Math.random().toString(36).substring(2, 8);
+            audioEngine.playStreakMilestone(10);
+            setIsSearching(false);
+            onClose();
+            if (onMatchFound) {
+              onMatchFound(roomId);
+            }
+            return 0;
+          }
+          return prev + 1;
+        });
       }, 1000);
     } else {
       setSearchTimer(0);
     }
     return () => clearInterval(interval);
-  }, [isSearching]);
+  }, [isSearching, onClose, onMatchFound]);
 
   const handleStartSearch = () => {
     audioEngine.playUiClick();

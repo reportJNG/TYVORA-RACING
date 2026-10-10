@@ -1,69 +1,37 @@
 // apps/web/src/App.tsx
 import React, { useState, useEffect } from 'react';
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useNavigate,
+} from 'react-router-dom';
 import { useSettingsStore } from './stores/useSettingsStore.js';
 import { useAuthStore } from './stores/useAuthStore.js';
 import { audioEngine } from './audio/AudioEngine.js';
 
 import { Header } from './components/layout/Header.js';
 
+// Screens
 import { HomeScreen } from './components/screens/HomeScreen.js';
 import { LandingScreen } from './components/screens/LandingScreen.js';
-import { RaceScreen } from './components/screens/RaceScreen.js';
+import { RaceModeSelectScreen } from './components/screens/RaceModeSelectScreen.js';
+import { GarageScreen } from './components/screens/GarageScreen.js';
+import { RacePlayingScreen } from './components/screens/RacePlayingScreen.js';
 import { LeaderboardScreen } from './components/screens/LeaderboardScreen.js';
 import { ProfileScreen } from './components/screens/ProfileScreen.js';
 import { SettingsScreen } from './components/screens/SettingsScreen.js';
 
+// Modals
 import { AuthModal } from './components/screens/AuthModal.js';
 import { OnlineModal } from './components/screens/OnlineModal.js';
 import { LegalModal, LegalTab } from './components/screens/LegalModal.js';
 
-export type ScreenType =
-  | 'home'
-  | 'landing'
-  | 'race'
-  | 'leaderboard'
-  | 'profile'
-  | 'settings';
-
-export const App: React.FC = () => {
+const AppContent: React.FC = () => {
+  const navigate = useNavigate();
   const { theme, reducedMotion, largeText } = useSettingsStore();
   const { currentUser } = useAuthStore();
-
-  const getScreenFromUrl = (): ScreenType => {
-    if (typeof window === 'undefined') return 'home';
-    const path = window.location.pathname.replace(/^\/+/, '').toLowerCase();
-    if (path === 'home' || path === '') return 'home';
-    if (path === 'race') return 'race';
-    if (path === 'leaderboard') return 'leaderboard';
-    if (path === 'profile') return 'profile';
-    if (path === 'settings') return 'settings';
-    if (path === 'landing') return 'landing';
-
-    const params = new URLSearchParams(window.location.search);
-    const s = params.get('screen');
-    if (s && ['home', 'race', 'leaderboard', 'profile', 'settings', 'landing'].includes(s)) {
-      return s as ScreenType;
-    }
-    return 'home';
-  };
-
-  const [currentScreen, setCurrentScreen] = useState<ScreenType>(getScreenFromUrl);
-
-  const navigateToScreen = (screen: ScreenType) => {
-    setCurrentScreen(screen);
-    if (typeof window !== 'undefined') {
-      const url = screen === 'home' ? '/home' : `/${screen}`;
-      window.history.pushState({ screen }, '', url);
-    }
-  };
-
-  useEffect(() => {
-    const handlePopState = () => {
-      setCurrentScreen(getScreenFromUrl());
-    };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
 
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalTab, setAuthModalTab] = useState<'signin' | 'signup'>('signin');
@@ -75,6 +43,16 @@ export const App: React.FC = () => {
   const openOnlineModal = (searching: boolean = false) => {
     setOnlineSearching(searching);
     setOnlineModalOpen(true);
+  };
+
+  const openAuth = (tab: 'signin' | 'signup' = 'signin') => {
+    setAuthModalTab(tab);
+    setAuthModalOpen(true);
+  };
+
+  const openLegal = (tab: LegalTab = 'about') => {
+    setLegalModalTab(tab);
+    setLegalModalOpen(true);
   };
 
   // Sync theme
@@ -105,76 +83,95 @@ export const App: React.FC = () => {
     };
   }, []);
 
-  const openAuth = (tab: 'signin' | 'signup' = 'signin') => {
-    setAuthModalTab(tab);
-    setAuthModalOpen(true);
-  };
-
-  const openLegal = (tab: LegalTab = 'about') => {
-    setLegalModalTab(tab);
-    setLegalModalOpen(true);
-  };
-
-  const isRaceActive = currentScreen === 'race';
-
   return (
     <div
       className={`min-h-screen bg-bg text-text flex flex-col font-sans selection:bg-accent selection:text-accent-contrast ${
         largeText ? 'text-lg' : 'text-base'
       } ${reducedMotion ? 'motion-reduce' : ''}`}
     >
-      {/* Top Header - hidden during active race view */}
-      {!isRaceActive && (
-        <Header
-          currentScreen={currentScreen}
-          onNavigate={(screen) => navigateToScreen(screen as ScreenType)}
-          onOpenOnlineModal={() => openOnlineModal(false)}
-          onOpenAuthModal={() => openAuth('signin')}
-        />
-      )}
+      {/* Top Header - automatically hides during active /race/playing routes */}
+      <Header
+        onOpenAuthModal={() => openAuth('signin')}
+        onOpenOnlineModal={() => openOnlineModal(false)}
+      />
 
-      {/* Main Content Area */}
+      {/* Main Content Area with React Router */}
       <main className="flex-1 flex flex-col relative overflow-hidden">
-        {currentScreen === 'home' && (
-          <HomeScreen
-            onStartRace={() => navigateToScreen('race')}
-            onNavigateLeaderboard={() => navigateToScreen('leaderboard')}
-            onNavigateProfile={() => {
-              if (currentUser) {
-                navigateToScreen('profile');
-              } else {
-                openAuth('signin');
-              }
-            }}
-            onOpenAuthModal={() => openAuth('signin')}
+        <Routes>
+          {/* Home Landing Routes */}
+          <Route
+            path="/"
+            element={
+              <HomeScreen
+                onStartRace={() => navigate('/race')}
+                onNavigateLeaderboard={() => navigate('/leaderboard')}
+                onNavigateProfile={() => {
+                  if (currentUser) {
+                    navigate('/profile');
+                  } else {
+                    openAuth('signin');
+                  }
+                }}
+                onOpenAuthModal={() => openAuth('signin')}
+              />
+            }
           />
-        )}
-
-        {currentScreen === 'landing' && (
-          <LandingScreen
-            onPlay={() => navigateToScreen('race')}
-            onLogin={() => openAuth('signin')}
+          <Route
+            path="/home"
+            element={
+              <HomeScreen
+                onStartRace={() => navigate('/race')}
+                onNavigateLeaderboard={() => navigate('/leaderboard')}
+                onNavigateProfile={() => {
+                  if (currentUser) {
+                    navigate('/profile');
+                  } else {
+                    openAuth('signin');
+                  }
+                }}
+                onOpenAuthModal={() => openAuth('signin')}
+              />
+            }
           />
-        )}
 
-        {currentScreen === 'race' && (
-          <RaceScreen
-            onHome={() => navigateToScreen('home')}
-            onLeaderboard={() => navigateToScreen('leaderboard')}
-            onOpenOnlineModal={(autoSearch) => openOnlineModal(autoSearch ?? true)}
+          <Route
+            path="/landing"
+            element={
+              <LandingScreen
+                onPlay={() => navigate('/race')}
+                onLogin={() => openAuth('signin')}
+              />
+            }
           />
-        )}
 
-        {currentScreen === 'leaderboard' && <LeaderboardScreen />}
+          {/* Race Hub Route */}
+          <Route path="/race" element={<RaceModeSelectScreen />} />
 
-        {currentScreen === 'profile' && <ProfileScreen />}
+          {/* Dedicated Showroom & Garage Route */}
+          <Route path="/race/garage" element={<GarageScreen />} />
 
-        {currentScreen === 'settings' && (
-          <SettingsScreen
-            onOpenLegal={(tab) => openLegal(tab)}
-            onLoggedOut={() => navigateToScreen('home')}
+          {/* Dedicated Active Race Playing Routes */}
+          <Route path="/race/playing" element={<RacePlayingScreen />} />
+          <Route path="/race/playing/:id" element={<RacePlayingScreen />} />
+
+          {/* Stats & Community Routes */}
+          <Route path="/leaderboard" element={<LeaderboardScreen />} />
+          <Route path="/profile" element={<ProfileScreen />} />
+
+          {/* Settings Route */}
+          <Route
+            path="/settings"
+            element={
+              <SettingsScreen
+                onOpenLegal={(tab) => openLegal(tab)}
+                onLoggedOut={() => navigate('/')}
+              />
+            }
           />
-        )}
+
+          {/* Catch-all fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </main>
 
       {/* Global Modals */}
@@ -188,6 +185,7 @@ export const App: React.FC = () => {
         isOpen={onlineModalOpen}
         onClose={() => setOnlineModalOpen(false)}
         initialSearching={onlineSearching}
+        onMatchFound={(roomId) => navigate(`/race/playing/${roomId}`)}
       />
 
       <LegalModal
@@ -198,4 +196,13 @@ export const App: React.FC = () => {
     </div>
   );
 };
+
+export const App: React.FC = () => {
+  return (
+    <BrowserRouter>
+      <AppContent />
+    </BrowserRouter>
+  );
+};
+
 export default App;

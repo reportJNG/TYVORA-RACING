@@ -1,7 +1,7 @@
 // apps/web/src/components/race/cars/CarCardSelector.tsx
 import React from 'react';
-import { Lock, Check } from 'lucide-react';
-import { CARS_LIST, CarVisualConfig } from '../../../data/cars.js';
+import { Lock } from 'lucide-react';
+import { CARS_LIST } from '../../../data/cars.js';
 import { audioEngine } from '../../../audio/AudioEngine.js';
 
 export interface CarCardSelectorProps {

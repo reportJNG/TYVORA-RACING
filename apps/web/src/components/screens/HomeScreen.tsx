@@ -1,5 +1,6 @@
 // apps/web/src/components/screens/HomeScreen.tsx
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Play, Gauge, Trophy } from 'lucide-react';
 import { useAuthStore } from '../../stores/useAuthStore.js';
 import { SEED_LEADERBOARD } from '../../data/mockLeaderboard.js';
@@ -7,15 +8,25 @@ import { audioEngine } from '../../audio/AudioEngine.js';
 import { GameplayBackground } from '../scene/GameplayBackground.js';
 
 export interface HomeScreenProps {
-  onStartRace: () => void;
+  onStartRace?: () => void;
   onNavigateLeaderboard?: () => void;
   onNavigateProfile?: () => void;
   onOpenAuthModal?: () => void;
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ onStartRace }) => {
+  const navigate = useNavigate();
   const { leaderboard } = useAuthStore();
   const [liveKmh, setLiveKmh] = useState(224);
+
+  const handleLaunch = () => {
+    audioEngine.playUiClick();
+    if (onStartRace) {
+      onStartRace();
+    } else {
+      navigate('/race');
+    }
+  };
 
   const topRacer =
     leaderboard && leaderboard.length > 0 ? leaderboard[0] : SEED_LEADERBOARD[0];
@@ -40,13 +51,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onStartRace }) => {
       if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return;
       if (e.key === ' ' || e.key === 'Enter') {
         e.preventDefault();
-        audioEngine.playUiClick();
-        onStartRace();
+        handleLaunch();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onStartRace]);
+  }, [handleLaunch]);
 
   // Dynamic tachometer bars (active count based on liveKmh)
   const activeBars = Math.min(6, Math.max(1, Math.round((liveKmh - 180) / 10)));
@@ -128,10 +138,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onStartRace }) => {
         {/* COMPONENT 2: START RACE BUTTON & LAUNCH HINT */}
         <div className="flex flex-col items-center justify-center gap-3 w-full sm:w-auto">
           <button
-            onClick={() => {
-              audioEngine.playUiClick();
-              onStartRace();
-            }}
+            onClick={handleLaunch}
             className="relative group w-full sm:w-auto min-w-[280px] sm:min-w-[340px] px-10 py-4.5 sm:px-14 sm:py-5 rounded-2xl bg-gradient-to-r from-accent via-[#ff5a27] to-amber-500 text-white font-extrabold text-xl sm:text-2xl tracking-wider shadow-[0_0_45px_rgba(255,75,38,0.5),0_12px_28px_rgba(0,0,0,0.55)] hover:shadow-[0_0_70px_rgba(255,75,38,0.8),0_16px_36px_rgba(255,75,38,0.4)] hover:scale-[1.03] active:scale-[0.98] active:translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-3.5 overflow-hidden border-t border-white/35 border-x border-white/20 border-b border-black/35 cursor-pointer"
           >
             {/* Top glass gloss reflection */}

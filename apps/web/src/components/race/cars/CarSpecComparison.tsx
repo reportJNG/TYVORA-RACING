@@ -1,6 +1,5 @@
-// apps/web/src/components/race/cars/CarSpecComparison.tsx
 import React from 'react';
-import { Gauge, Zap, Shield, TrendingUp, TrendingDown } from 'lucide-react';
+import { TrendingUp, TrendingDown } from 'lucide-react';
 import { CarVisualConfig } from '../../../data/cars.js';
 import { CarSpecBar } from './CarSpecBar.js';
 
@@ -112,8 +111,8 @@ export const CarSpecComparison: React.FC<CarSpecComparisonProps> = ({
       {/* Spec Summary Pill Badges */}
       <div className="grid grid-cols-3 gap-2 pt-1 border-t border-white/8 text-center text-[10px]">
         <div className="p-2 rounded-xl bg-black/25 border border-white/8">
-          <span className="text-white/40 block">WEIGHT</span>
-          <span className="font-bold text-white text-xs">{selectedCar.displaySpecs.massKg} KG</span>
+          <span className="text-white/40 block">BODY STYLE</span>
+          <span className="font-bold text-white text-xs truncate block">{selectedCar.bodyStyle}</span>
         </div>
         <div className="p-2 rounded-xl bg-black/25 border border-white/8">
           <span className="text-white/40 block">AERODYNAMICS</span>

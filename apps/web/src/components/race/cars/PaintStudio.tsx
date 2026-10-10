@@ -1,7 +1,6 @@
-// apps/web/src/components/race/cars/PaintStudio.tsx
 import React from 'react';
-import { Palette, Sparkles, Check } from 'lucide-react';
-import { PAINT_PALETTE, PaintColor } from '../../../data/cars.js';
+import { Palette, Check } from 'lucide-react';
+import { PAINT_PALETTE } from '../../../data/cars.js';
 import { audioEngine } from '../../../audio/AudioEngine.js';
 
 export interface PaintStudioProps {

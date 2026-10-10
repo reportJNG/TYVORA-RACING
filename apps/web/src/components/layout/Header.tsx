@@ -1,23 +1,24 @@
 // apps/web/src/components/layout/Header.tsx
 import React, { useState } from 'react';
-import { User, Settings, LogOut, ChevronDown, Volume2, VolumeX, Download, Zap } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { User, Settings, LogOut, ChevronDown, Volume2, VolumeX, Download, Zap, Wrench } from 'lucide-react';
 import { useAuthStore } from '../../stores/useAuthStore.js';
 import { useSettingsStore } from '../../stores/useSettingsStore.js';
 import { Avatar } from '../common/Avatar.js';
 import { audioEngine } from '../../audio/AudioEngine.js';
 
 export interface HeaderProps {
-  currentScreen: string;
-  onNavigate: (screen: string) => void;
-  onOpenOnlineModal: () => void;
-  onOpenAuthModal: () => void;
+  onOpenAuthModal?: () => void;
+  onOpenOnlineModal?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
-  currentScreen,
-  onNavigate,
   onOpenAuthModal,
 }) => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const pathname = location.pathname;
+
   const { currentUser, isAuthenticated, logout, downloadDatabaseFile } = useAuthStore();
   const {
     typingSound,
@@ -30,8 +31,8 @@ export const Header: React.FC<HeaderProps> = ({
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  // Hidden during active race
-  if (currentScreen === 'race') return null;
+  // Hidden during active racing viewport
+  if (pathname.startsWith('/race/playing')) return null;
 
   const isMuted = !typingSound && !engineSound && !raceEffects;
 
@@ -48,7 +49,7 @@ export const Header: React.FC<HeaderProps> = ({
     }
   };
 
-  const isHome = currentScreen === 'home';
+  const isHome = pathname === '/' || pathname === '/home';
 
   return (
     <header
@@ -63,7 +64,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div
           onClick={() => {
             audioEngine.playUiClick();
-            onNavigate('home');
+            navigate('/');
           }}
           className="flex items-center gap-2.5 cursor-pointer group select-none"
         >
@@ -76,15 +77,15 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Center Nav: Home, Race, Leaderboard */}
+        {/* Center Nav: Home, Race, Garage, Leaderboard */}
         <nav className="flex items-center gap-1 p-1 rounded-full bg-surface-2/60 border border-border/80 backdrop-blur-md text-xs">
           <button
             onClick={() => {
               audioEngine.playUiClick();
-              onNavigate('home');
+              navigate('/');
             }}
-            className={`px-3.5 py-1 rounded-full font-medium transition-all ${
-              currentScreen === 'home'
+            className={`px-3.5 py-1 rounded-full font-medium transition-all cursor-pointer ${
+              isHome
                 ? 'bg-accent text-white font-semibold shadow-sm shadow-accent/20'
                 : 'text-text-muted hover:text-text hover:bg-surface-2'
             }`}
@@ -94,10 +95,10 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={() => {
               audioEngine.playUiClick();
-              onNavigate('race');
+              navigate('/race');
             }}
-            className={`px-3.5 py-1 rounded-full font-medium transition-all ${
-              currentScreen === 'race'
+            className={`px-3.5 py-1 rounded-full font-medium transition-all cursor-pointer ${
+              pathname === '/race'
                 ? 'bg-accent text-white font-semibold shadow-sm shadow-accent/20'
                 : 'text-text-muted hover:text-text hover:bg-surface-2'
             }`}
@@ -107,10 +108,24 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={() => {
               audioEngine.playUiClick();
-              onNavigate('leaderboard');
+              navigate('/race/garage');
             }}
-            className={`px-3.5 py-1 rounded-full font-medium transition-all ${
-              currentScreen === 'leaderboard'
+            className={`px-3.5 py-1 rounded-full font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
+              pathname === '/race/garage'
+                ? 'bg-accent text-white font-semibold shadow-sm shadow-accent/20'
+                : 'text-text-muted hover:text-text hover:bg-surface-2'
+            }`}
+          >
+            <Wrench className="w-3 h-3" />
+            <span>Garage</span>
+          </button>
+          <button
+            onClick={() => {
+              audioEngine.playUiClick();
+              navigate('/leaderboard');
+            }}
+            className={`px-3.5 py-1 rounded-full font-medium transition-all cursor-pointer ${
+              pathname === '/leaderboard'
                 ? 'bg-accent text-white font-semibold shadow-sm shadow-accent/20'
                 : 'text-text-muted hover:text-text hover:bg-surface-2'
             }`}
@@ -125,7 +140,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={toggleSound}
             title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-text-muted hover:text-text bg-surface-2/60 hover:bg-surface-2 border border-border transition-all"
+            className="w-8 h-8 rounded-full flex items-center justify-center text-text-muted hover:text-text bg-surface-2/60 hover:bg-surface-2 border border-border transition-all cursor-pointer"
             aria-label="Toggle Sound"
           >
             {isMuted ? (
@@ -140,8 +155,8 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="relative">
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className={`flex items-center gap-2 py-1 px-2.5 rounded-full border transition-all text-xs ${
-                  currentScreen === 'profile'
+                className={`flex items-center gap-2 py-1 px-2.5 rounded-full border transition-all text-xs cursor-pointer ${
+                  pathname === '/profile'
                     ? 'bg-accent/15 border-accent text-accent'
                     : 'bg-surface-2/80 hover:bg-surface border-border text-text'
                 }`}
@@ -178,9 +193,9 @@ export const Header: React.FC<HeaderProps> = ({
                       onClick={() => {
                         audioEngine.playUiClick();
                         setIsDropdownOpen(false);
-                        onNavigate('profile');
+                        navigate('/profile');
                       }}
-                      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-text hover:bg-surface-2 transition-colors text-left"
+                      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-text hover:bg-surface-2 transition-colors text-left cursor-pointer"
                     >
                       <User className="w-3.5 h-3.5 text-accent" />
                       <span>Profile & Data</span>
@@ -190,9 +205,9 @@ export const Header: React.FC<HeaderProps> = ({
                       onClick={() => {
                         audioEngine.playUiClick();
                         setIsDropdownOpen(false);
-                        onNavigate('settings');
+                        navigate('/settings');
                       }}
-                      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-text hover:bg-surface-2 transition-colors text-left"
+                      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-text hover:bg-surface-2 transition-colors text-left cursor-pointer"
                     >
                       <Settings className="w-3.5 h-3.5 text-text-muted" />
                       <span>Settings</span>
@@ -204,7 +219,7 @@ export const Header: React.FC<HeaderProps> = ({
                         setIsDropdownOpen(false);
                         downloadDatabaseFile();
                       }}
-                      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-text hover:bg-surface-2 transition-colors text-left"
+                      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-text hover:bg-surface-2 transition-colors text-left cursor-pointer"
                       title="Download full SQLite database binary"
                     >
                       <Download className="w-3.5 h-3.5 text-accent" />
@@ -219,7 +234,7 @@ export const Header: React.FC<HeaderProps> = ({
                         setIsDropdownOpen(false);
                         logout();
                       }}
-                      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-danger hover:bg-surface-2 transition-colors text-left"
+                      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-danger hover:bg-surface-2 transition-colors text-left cursor-pointer"
                     >
                       <LogOut className="w-3.5 h-3.5" />
                       <span>Log Out</span>
@@ -232,9 +247,9 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={() => {
                 audioEngine.playUiClick();
-                onOpenAuthModal();
+                if (onOpenAuthModal) onOpenAuthModal();
               }}
-              className="px-4 py-1.5 rounded-full bg-accent hover:bg-accent-hover text-white text-xs font-semibold shadow-sm shadow-accent/25 transition-all"
+              className="px-4 py-1.5 rounded-full bg-accent hover:bg-accent-hover text-white text-xs font-semibold shadow-sm shadow-accent/25 transition-all cursor-pointer"
             >
               Sign In
             </button>
@@ -244,3 +259,4 @@ export const Header: React.FC<HeaderProps> = ({
     </header>
   );
 };
+export default Header;
