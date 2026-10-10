@@ -8,11 +8,22 @@ import { audioEngine } from '../../audio/AudioEngine.js';
 export interface OnlineModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialSearching?: boolean;
 }
 
-export const OnlineModal: React.FC<OnlineModalProps> = ({ isOpen, onClose }) => {
-  const [isSearching, setIsSearching] = useState(false);
+export const OnlineModal: React.FC<OnlineModalProps> = ({
+  isOpen,
+  onClose,
+  initialSearching = false,
+}) => {
+  const [isSearching, setIsSearching] = useState(initialSearching);
   const [searchTimer, setSearchTimer] = useState(0);
+
+  useEffect(() => {
+    if (isOpen && initialSearching) {
+      setIsSearching(true);
+    }
+  }, [isOpen, initialSearching]);
 
   useEffect(() => {
     let interval: any;

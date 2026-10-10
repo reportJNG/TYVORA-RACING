@@ -68,8 +68,14 @@ export const App: React.FC = () => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalTab, setAuthModalTab] = useState<'signin' | 'signup'>('signin');
   const [onlineModalOpen, setOnlineModalOpen] = useState(false);
+  const [onlineSearching, setOnlineSearching] = useState(false);
   const [legalModalOpen, setLegalModalOpen] = useState(false);
   const [legalModalTab, setLegalModalTab] = useState<LegalTab>('about');
+
+  const openOnlineModal = (searching: boolean = false) => {
+    setOnlineSearching(searching);
+    setOnlineModalOpen(true);
+  };
 
   // Sync theme
   useEffect(() => {
@@ -122,7 +128,7 @@ export const App: React.FC = () => {
         <Header
           currentScreen={currentScreen}
           onNavigate={(screen) => navigateToScreen(screen as ScreenType)}
-          onOpenOnlineModal={() => setOnlineModalOpen(true)}
+          onOpenOnlineModal={() => openOnlineModal(false)}
           onOpenAuthModal={() => openAuth('signin')}
         />
       )}
@@ -155,7 +161,7 @@ export const App: React.FC = () => {
           <RaceScreen
             onHome={() => navigateToScreen('home')}
             onLeaderboard={() => navigateToScreen('leaderboard')}
-            onOpenOnlineModal={() => setOnlineModalOpen(true)}
+            onOpenOnlineModal={(autoSearch) => openOnlineModal(autoSearch ?? true)}
           />
         )}
 
@@ -181,6 +187,7 @@ export const App: React.FC = () => {
       <OnlineModal
         isOpen={onlineModalOpen}
         onClose={() => setOnlineModalOpen(false)}
+        initialSearching={onlineSearching}
       />
 
       <LegalModal

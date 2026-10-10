@@ -82,6 +82,7 @@ export interface RaceStoreState {
   selectedTrackId: string;
   customPaintColor: string | null;
   difficulty: Difficulty;
+  botCount: number;
   currentPassage: Passage | PassageItem;
   raceDistance: number;
   countdownValue: number; // 3, 2, 1, 0 (GO)
@@ -96,6 +97,7 @@ export interface RaceStoreState {
   selectTrack: (trackId: string) => void;
   setCustomPaintColor: (hex: string | null) => void;
   selectDifficulty: (diff: Difficulty) => void;
+  selectBotCount: (count: number) => void;
   prepareRace: (round?: number) => void;
   startCountdown: () => void;
   pauseRace: () => void;
@@ -128,6 +130,7 @@ export const useRaceStore = create<RaceStoreState>((set, get) => ({
   selectedTrackId: 'pacific-coast',
   customPaintColor: null,
   difficulty: 'normal',
+  botCount: 2,
   currentPassage: defaultPassage as any,
   raceDistance: defaultPassage.text.length * M,
   countdownValue: 3,
@@ -142,9 +145,10 @@ export const useRaceStore = create<RaceStoreState>((set, get) => ({
   selectTrack: (trackId: string) => set({ selectedTrackId: trackId }),
   setCustomPaintColor: (customPaintColor: string | null) => set({ customPaintColor }),
   selectDifficulty: (difficulty: Difficulty) => set({ difficulty }),
+  selectBotCount: (botCount: number) => set({ botCount }),
 
   prepareRace: (roundNumber: number = 1) => {
-    const { difficulty, selectedCarId, selectedTrackId, roundResults } = get();
+    const { difficulty, selectedCarId, selectedTrackId, roundResults, botCount = 2 } = get();
     const isNewMatch = roundNumber === 1;
     const excludeIds = isNewMatch ? [] : roundResults.map((r: any) => r.passageId).filter(Boolean);
     const passage = getPassageForRound(difficulty, roundNumber, undefined, excludeIds);
@@ -156,51 +160,66 @@ export const useRaceStore = create<RaceStoreState>((set, get) => ({
     // Setup Player sim
     const playerSim = createRacerSim('player', 'You', 'B', true);
 
-    // Pick 2 AI cars
+    const actualBotCount = Math.min(5, Math.max(1, botCount));
     const availableCarIds = Object.keys(CAR_SPECS).filter((id) => id !== selectedCarId);
     const shuffledCars = [...availableCarIds].sort(() => 0.5 - Math.random());
-    const rivalCarId = shuffledCars[0] || 'strada-r';
-    const pacerCarId = shuffledCars[1] || 'volta-e';
 
-    const profiles = AI_DIFFICULTY_PROFILES[difficulty];
+    const profiles = AI_DIFFICULTY_PROFILES[difficulty] || AI_DIFFICULTY_PROFILES.normal;
+    const baseWpm = difficulty === 'easy' ? 30 : difficulty === 'hard' ? 66 : 46;
+    const baseError = difficulty === 'easy' ? 45 : difficulty === 'hard' ? 25 : 35;
+
+    const BOT_NAMES = ['Nitro Nova', 'Apex Ace', 'SpeedDemon', 'Ghost Zero', 'Veloce Kai', 'Thunder Fox'];
+    const LANE_OFFSETS = [-3.6, 3.6, -1.8, 1.8, -4.8];
+
+    const opponents: OpponentState[] = [];
+    const botEntrants: RaceEntrant[] = [];
     const seed = Date.now() + Math.floor(Math.random() * 100000);
 
-    // Generate AI Rival
-    const rivalAi = generateAiLog(
-      seed,
-      passage.text,
-      profiles.rival.targetWpm,
-      profiles.rival.errorRatePermille
-    );
-    const rivalSim = createRacerSim('ai-rival', profiles.rival.name, 'A', false);
-    const rivalTyping = createTypingState(passage.text);
+    for (let i = 0; i < actualBotCount; i++) {
+      const carId = shuffledCars[i % shuffledCars.length] || 'strada-r';
+      const botName = i === 0 
+        ? profiles.rival.name 
+        : i === 1 
+        ? profiles.pacer.name 
+        : BOT_NAMES[i % BOT_NAMES.length];
 
-    // Generate AI Pacer
-    const pacerAi = generateAiLog(
-      seed + 1,
-      passage.text,
-      profiles.pacer.targetWpm,
-      profiles.pacer.errorRatePermille
-    );
-    const pacerSim = createRacerSim('ai-pacer', profiles.pacer.name, 'C', false);
-    const pacerTyping = createTypingState(passage.text);
+      const botWpm = i === 0 
+        ? profiles.rival.targetWpm 
+        : i === 1 
+        ? profiles.pacer.targetWpm 
+        : Math.round(baseWpm + ((i - 2) * 3));
 
-    const opponents: OpponentState[] = [
-      {
-        racer: rivalSim,
-        typing: rivalTyping,
-        log: rivalAi.log,
-        car: CAR_SPECS[rivalCarId],
-        targetWpm: profiles.rival.targetWpm,
-      },
-      {
-        racer: pacerSim,
-        typing: pacerTyping,
-        log: pacerAi.log,
-        car: CAR_SPECS[pacerCarId],
-        targetWpm: profiles.pacer.targetWpm,
-      },
-    ];
+      const botError = i === 0 
+        ? profiles.rival.errorRatePermille 
+        : i === 1 
+        ? profiles.pacer.errorRatePermille 
+        : baseError;
+
+      const aiData = generateAiLog(seed + i * 17, passage.text, botWpm, botError);
+      const lane: 'A' | 'C' = i % 2 === 0 ? 'A' : 'C';
+      const sim = createRacerSim(`ai-${i}`, botName, lane, false);
+      const typing = createTypingState(passage.text);
+      const laneOffset = LANE_OFFSETS[i % LANE_OFFSETS.length];
+
+      opponents.push({
+        racer: sim,
+        typing,
+        log: aiData.log,
+        car: CAR_SPECS[carId] || CAR_SPECS['strada-r'],
+        targetWpm: botWpm,
+      });
+
+      botEntrants.push({
+        racer: sim,
+        typing,
+        car: CAR_SPECS[carId] || CAR_SPECS['strada-r'],
+        script: aiData.log,
+        cursor: 0,
+        laneOffset,
+        targetWpm: botWpm,
+        mistakeTwitchSign: i % 2 === 0 ? -1 : 1,
+      });
+    }
 
     // Load into decoupled GameEngine
     const entrants: RaceEntrant[] = [
@@ -214,26 +233,7 @@ export const useRaceStore = create<RaceStoreState>((set, get) => ({
         targetWpm: 85,
         mistakeTwitchSign: 1,
       },
-      {
-        racer: rivalSim,
-        typing: rivalTyping,
-        car: CAR_SPECS[rivalCarId],
-        script: rivalAi.log,
-        cursor: 0,
-        laneOffset: -3.6, // Lane A
-        targetWpm: profiles.rival.targetWpm,
-        mistakeTwitchSign: -1,
-      },
-      {
-        racer: pacerSim,
-        typing: pacerTyping,
-        car: CAR_SPECS[pacerCarId],
-        script: pacerAi.log,
-        cursor: 0,
-        laneOffset: 3.6, // Lane C
-        targetWpm: profiles.pacer.targetWpm,
-        mistakeTwitchSign: 1,
-      },
+      ...botEntrants,
     ];
 
     // Clean up previous engine event subscriptions

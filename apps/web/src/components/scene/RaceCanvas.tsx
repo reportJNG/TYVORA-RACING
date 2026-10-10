@@ -29,29 +29,8 @@ export const RaceCanvas: React.FC = React.memo(() => {
   const playerTangent = trackSpline.getTangentAtDistance(playerSim.d).normalize();
   const playerRotY = Math.atan2(playerTangent.x, playerTangent.z);
 
-  // Compute Ghost 1 (Rival - Lane A = -3.4 offset, accurately following its own spline section)
-  const opp1 = opponents[0];
-  const opp1Pos = useMemo(() => {
-    if (!opp1) return new THREE.Vector3();
-    const pt = trackSpline.getPointAtDistance(opp1.racer.d);
-    const tangent = trackSpline.getTangentAtDistance(opp1.racer.d).normalize();
-    const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
-    return pt.add(normal.multiplyScalar(3.4));
-  }, [opp1?.racer.d, trackSpline]);
-  const opp1Tangent = opp1 ? trackSpline.getTangentAtDistance(opp1.racer.d).normalize() : playerTangent;
-  const opp1RotY = Math.atan2(opp1Tangent.x, opp1Tangent.z);
-
-  // Compute Ghost 2 (Pacer - Lane C = +3.4 offset, accurately following its own spline section)
-  const opp2 = opponents[1];
-  const opp2Pos = useMemo(() => {
-    if (!opp2) return new THREE.Vector3();
-    const pt = trackSpline.getPointAtDistance(opp2.racer.d);
-    const tangent = trackSpline.getTangentAtDistance(opp2.racer.d).normalize();
-    const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
-    return pt.add(normal.multiplyScalar(-3.4));
-  }, [opp2?.racer.d, trackSpline]);
-  const opp2Tangent = opp2 ? trackSpline.getTangentAtDistance(opp2.racer.d).normalize() : playerTangent;
-  const opp2RotY = Math.atan2(opp2Tangent.x, opp2Tangent.z);
+  const LANE_OFFSETS = [3.4, -3.4, 1.8, -1.8, 4.5, -4.5];
+  const GHOST_ROLES: ('rival' | 'pacer' | 'challenger')[] = ['rival', 'pacer', 'challenger', 'rival', 'pacer'];
 
   const playerSpeedKmh = playerSim.v * 3.6;
   const isPlayerStalled = playerSim.stallUntilMs > raceTimeMs;
@@ -109,33 +88,30 @@ export const RaceCanvas: React.FC = React.memo(() => {
           rotation={[0, playerRotY, 0]}
         />
 
-        {/* GHOST RIVAL RACER (Crimson Spectral Trail, Lane A) */}
-        {opp1 && (
-          <GhostVehicle3D
-            carId={opp1.car.id}
-            role="rival"
-            speedKmh={opp1.racer.v * 3.6}
-            accel={opp1.racer.accel}
-            position={[opp1Pos.x, opp1Pos.y, opp1Pos.z]}
-            rotation={[0, opp1RotY, 0]}
-            playerDistance={playerSim.d}
-            ghostDistance={opp1.racer.d}
-          />
-        )}
+        {/* DYNAMIC OPPONENT GHOST CARS */}
+        {opponents.map((opp, idx) => {
+          const offsetDist = LANE_OFFSETS[idx % LANE_OFFSETS.length];
+          const pt = trackSpline.getPointAtDistance(opp.racer.d);
+          const tangent = trackSpline.getTangentAtDistance(opp.racer.d).normalize();
+          const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
+          const pos = pt.add(normal.multiplyScalar(offsetDist));
+          const rotY = Math.atan2(tangent.x, tangent.z);
+          const role = GHOST_ROLES[idx % GHOST_ROLES.length];
 
-        {/* GHOST PACER RACER (Electric Cyan Trail, Lane C) */}
-        {opp2 && (
-          <GhostVehicle3D
-            carId={opp2.car.id}
-            role="pacer"
-            speedKmh={opp2.racer.v * 3.6}
-            accel={opp2.racer.accel}
-            position={[opp2Pos.x, opp2Pos.y, opp2Pos.z]}
-            rotation={[0, opp2RotY, 0]}
-            playerDistance={playerSim.d}
-            ghostDistance={opp2.racer.d}
-          />
-        )}
+          return (
+            <GhostVehicle3D
+              key={opp.racer.id || idx}
+              carId={opp.car.id}
+              role={role}
+              speedKmh={opp.racer.v * 3.6}
+              accel={opp.racer.accel}
+              position={[pos.x, pos.y, pos.z]}
+              rotation={[0, rotY, 0]}
+              playerDistance={playerSim.d}
+              ghostDistance={opp.racer.d}
+            />
+          );
+        })}
 
         {/* ADAPTIVE SMOOTH PLAYER-FOLLOW CAMERA */}
         <PlayerFollowCamera
